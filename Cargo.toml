@@ -1,0 +1,10 @@
+[package]
+name = "seckey"
+version = "0.1.0"
+authors = ["quininer kel <quininer@live.com>"]
+
+[dependencies]
+memsec = "0.1"
+
+[dev-dependencies]
+nix = "0.6"
