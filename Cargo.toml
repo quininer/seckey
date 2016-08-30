@@ -1,8 +1,8 @@
 [package]
 name = "seckey"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["quininer kel <quininer@live.com>"]
-description = "Use `memset` protected secret memory."
+description = "Use `memsec` protected secret memory."
 repository = "https://github.com/quininer/seckey"
 license = "MIT"
 

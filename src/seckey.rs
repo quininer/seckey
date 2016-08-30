@@ -7,7 +7,7 @@ use memsec::{
 };
 
 
-/// Secure Bytes Box.
+/// Secure Key.
 ///
 /// The use [memsec/malloc](../../memsec/fn.malloc.html) protection secret bytes.
 /// When you need the password stored in the memory, you should use it.

@@ -1,7 +1,8 @@
 use std::fmt;
-use std::mem::{ size_of, size_of_val };
+use std::ptr::copy;
+use std::mem::{ uninitialized, size_of, size_of_val };
 use std::ops::{ Deref, DerefMut };
-use memsec::{ memcmp, mlock, munlock };
+use memsec::{ memzero, memcmp, mlock, munlock };
 
 
 /// Temporary Key.
@@ -9,22 +10,28 @@ use memsec::{ memcmp, mlock, munlock };
 /// ```
 /// use seckey::Key;
 ///
-/// let key = Key::<[u8; 8]>::new([8; 8]);
+/// let key = Key::<[u8; 8]>::new(&[8; 8]);
 /// assert_eq!(key, [8u8; 8]);
 /// ```
 pub struct Key<T: Sized>(T);
 
 impl<T> Key<T> where T: Sized {
-    pub fn new(t: T) -> Key<T> {
-        unsafe { mlock(&t as *const T as *mut T, size_of::<T>()) };
-        Key(t)
+    pub fn new(t: &T) -> Key<T> {
+        let mut memo = unsafe { uninitialized() };
+        unsafe {
+            mlock(&mut memo, size_of::<T>());
+            copy(t, &mut memo, 1);
+        }
+        Key(memo)
     }
 }
 
 impl<T> From<T> for Key<T> {
     #[inline]
-    fn from(t: T) -> Key<T> {
-        Key::new(t)
+    fn from(mut t: T) -> Key<T> {
+        let output = Key::new(&t);
+        unsafe { memzero(&mut t, size_of_val(&t)) };
+        output
     }
 }
 
