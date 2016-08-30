@@ -3,6 +3,7 @@ use std::mem::{ size_of, size_of_val };
 use std::ops::{ Deref, DerefMut };
 use memsec::{ memcmp, mlock, munlock };
 
+
 /// Temporary Key.
 ///
 /// ```
