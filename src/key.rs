@@ -30,7 +30,7 @@ impl<T> From<T> for Key<T> {
     #[inline]
     fn from(mut t: T) -> Key<T> {
         let output = Key::new(&t);
-        unsafe { memzero(&mut t, size_of_val(&t)) };
+        unsafe { memzero(&mut t, size_of::<T>()) };
         output
     }
 }

@@ -18,7 +18,7 @@ fn protect_seckey_test() {
     );
     unsafe { signal::sigaction(signal::SIGSEGV, &sigaction).ok() };
 
-    let mut secpass = SecKey::new(&mut [1; 8]).unwrap();
+    let mut secpass = SecKey::new(&[1; 8]).unwrap();
 
     let (bs_ptr, bs_len) = secpass.write_map(|bs| (bs.as_mut_ptr(), bs.len())); // violence get secpass ptr
     let bs_bytes = unsafe { slice::from_raw_parts_mut(bs_ptr, bs_len) };

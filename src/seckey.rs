@@ -2,7 +2,7 @@ use std::fmt;
 use std::ptr::copy;
 use std::mem::size_of;
 use memsec::{
-    memzero, malloc, free,
+    malloc, free,
     Prot, unprotected_mprotect
 };
 
@@ -16,14 +16,13 @@ use memsec::{
 pub struct SecKey<T: Sized>(*mut T);
 
 impl<T> SecKey<T> where T: Sized {
-    pub fn new(t: &mut T) -> Option<SecKey<T>> {
+    pub fn new(t: &T) -> Option<SecKey<T>> {
         let memptr = match unsafe { malloc(size_of::<T>()) } {
             Some(memptr) => memptr,
             None => return None
         };
         unsafe {
             copy(t, memptr, 1);
-            memzero(t, size_of::<T>());
             unprotected_mprotect(memptr, Prot::NoAccess);
         }
         Some(SecKey(memptr))
@@ -35,9 +34,8 @@ impl<T> SecKey<T> where T: Sized {
     /// use seckey::SecKey;
     ///
     /// let mut pass: [u8; 8] = [8; 8];
-    /// let secpass = SecKey::new(&mut pass).unwrap();
-    /// assert_eq!(pass, [0; 8]);
-    /// assert!(secpass.read_map(|b| b == &[8u8; 8]));
+    /// let secpass = SecKey::new(&pass).unwrap();
+    /// assert!(secpass.read_map(|b| b == &pass));
     /// ```
     pub fn read_map<U, F: FnOnce(&T) -> U>(&self, f: F) -> U {
         unsafe { unprotected_mprotect(self.0, Prot::ReadOnly) };
@@ -52,8 +50,7 @@ impl<T> SecKey<T> where T: Sized {
     /// # use seckey::SecKey;
     /// #
     /// # let mut pass: [u8; 8] = [8; 8];
-    /// # let mut secpass = SecKey::new(&mut pass).unwrap();
-    /// # assert_eq!(pass, [0; 8]);
+    /// # let mut secpass = SecKey::new(&pass).unwrap();
     /// secpass.write_map(|bs| bs[0] = 0);
     /// let bs = secpass.read_map(|bs| {
     ///     let mut pass = [0; 8];
@@ -71,8 +68,8 @@ impl<T> SecKey<T> where T: Sized {
 }
 
 impl<T> From<T> for SecKey<T> {
-    fn from(mut t: T) -> SecKey<T> {
-        SecKey::new(&mut t).unwrap()
+    fn from(t: T) -> SecKey<T> {
+        SecKey::new(&t).unwrap()
     }
 }
 

@@ -1,4 +1,4 @@
-//! Use [memset](https://github.com/quininer/memsec) protected secret memory.
+//! Use [memsec](https://github.com/quininer/memsec) protected secret memory.
 
 extern crate memsec;
 
