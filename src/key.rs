@@ -1,7 +1,6 @@
 use std::fmt;
 use std::ptr::copy;
 use std::mem::{ uninitialized, size_of, size_of_val };
-use std::ops::{ Deref, DerefMut };
 use memsec::{ memzero, memcmp, mlock, munlock };
 
 
@@ -13,7 +12,7 @@ use memsec::{ memzero, memcmp, mlock, munlock };
 /// let key = Key::<[u8; 8]>::new(&[8; 8]);
 /// assert_eq!(key, [8u8; 8]);
 /// ```
-pub struct Key<T: Sized>(T);
+pub struct Key<T: Sized>(pub T);
 
 impl<T> Key<T> where T: Sized {
     pub fn new(t: &T) -> Key<T> {
@@ -32,19 +31,6 @@ impl<T> From<T> for Key<T> {
         let output = Key::new(&t);
         unsafe { memzero(&mut t, size_of::<T>()) };
         output
-    }
-}
-
-impl<T> Deref for Key<T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        &self.0
-    }
-}
-
-impl<T> DerefMut for Key<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.0
     }
 }
 

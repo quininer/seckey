@@ -1,6 +1,6 @@
 use std::fmt;
 use std::iter::repeat;
-use std::ops::Deref;
+use std::ops::{ Deref, DerefMut };
 use memsec::{ memcmp, mlock, munlock };
 
 
@@ -15,7 +15,7 @@ use memsec::{ memcmp, mlock, munlock };
 /// assert_eq!(bytes, [8; 8]);
 /// ```
 #[derive(Clone)]
-pub struct Bytes(pub Vec<u8>);
+pub struct Bytes(Vec<u8>);
 
 impl Bytes {
     /// Create a new Bytes.
@@ -23,6 +23,12 @@ impl Bytes {
     pub fn new(input: &[u8]) -> Bytes {
         let input: Vec<u8> = input.into();
         Bytes::from(input)
+    }
+
+    /// Create a empty Bytes.
+    #[inline]
+    pub fn empty() -> Bytes {
+        Bytes(Vec::new())
     }
 }
 
@@ -43,6 +49,12 @@ impl Deref for Bytes {
     type Target = [u8];
     fn deref(&self) -> &[u8] {
         self.0.as_slice()
+    }
+}
+
+impl DerefMut for Bytes {
+    fn deref_mut(&mut self) -> &mut [u8] {
+        self.0.as_mut_slice()
     }
 }
 
