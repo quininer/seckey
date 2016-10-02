@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ptr::copy;
 use std::mem::{ uninitialized, size_of, size_of_val };
-use memsec::{ memzero, memcmp, mlock, munlock };
+use memsec::{ memcmp, mlock, munlock };
 
 
 /// Temporary Key.
@@ -28,9 +28,8 @@ impl<T> Key<T> where T: Sized {
 impl<T> From<T> for Key<T> {
     #[inline]
     fn from(mut t: T) -> Key<T> {
-        let output = Key::new(&t);
-        unsafe { memzero(&mut t, size_of::<T>()) };
-        output
+        unsafe { mlock(&mut t, size_of::<T>()) };
+        Key(t)
     }
 }
 
