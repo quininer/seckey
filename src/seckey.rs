@@ -2,6 +2,7 @@ use std::fmt;
 use std::ptr::copy;
 use std::mem::size_of;
 use memsec::{
+    memzero,
     malloc, free,
     Prot, unprotected_mprotect
 };
@@ -68,8 +69,10 @@ impl<T> SecKey<T> where T: Sized {
 }
 
 impl<T> From<T> for SecKey<T> {
-    fn from(t: T) -> SecKey<T> {
-        SecKey::new(&t).unwrap()
+    fn from(mut t: T) -> SecKey<T> {
+        let output = SecKey::new(&t).unwrap();
+        unsafe { memzero(&mut t, size_of::<T>()) };
+        output
     }
 }
 
