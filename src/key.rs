@@ -1,6 +1,6 @@
 use std::fmt;
 use std::ptr::copy;
-use std::mem::{ uninitialized, size_of, size_of_val };
+use std::mem::{ uninitialized, size_of };
 use memsec::{ memcmp, mlock, munlock };
 
 
@@ -11,6 +11,8 @@ use memsec::{ memcmp, mlock, munlock };
 ///
 /// let key = Key::<[u8; 8]>::new(&[8; 8]);
 /// assert_eq!(key, [8u8; 8]);
+/// assert!(key != [1u8; 8]);
+/// assert_eq!(key, Key::new(&[8u8; 8]));
 /// ```
 pub struct Key<T: Sized>(pub T);
 
@@ -39,21 +41,19 @@ impl<T> fmt::Debug for Key<T> {
     }
 }
 
-impl<T: Sized, X: ?Sized> PartialEq<X> for Key<T> {
-    fn eq(&self, rhs: &X) -> bool {
-        if size_of::<T>() == size_of_val(rhs) {
-            unsafe { memcmp(
-                &self.0 as *const T as *const u8,
-                rhs as *const X as *const u8,
-                size_of::<T>()
-            ) == 0 }
-        } else {
-            false
-        }
+impl<T: Sized> PartialEq<T> for Key<T> {
+    fn eq(&self, rhs: &T) -> bool {
+        unsafe { memcmp(&self.0, rhs, size_of::<T>()) == 0 }
     }
 }
 
-impl<T> Eq for Key<T> {}
+impl<T: Sized> PartialEq<Key<T>> for Key<T> {
+    fn eq(&self, &Key(ref rhs): &Key<T>) -> bool {
+        unsafe { memcmp(&self.0, rhs, size_of::<T>()) == 0 }
+    }
+}
+
+impl<T: Sized> Eq for Key<T> {}
 
 impl<T> Drop for Key<T> where T: Sized {
     fn drop(&mut self) {
