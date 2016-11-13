@@ -4,7 +4,7 @@ use std::mem::size_of;
 use memsec::{
     memzero,
     malloc, free,
-    Prot, unprotected_mprotect
+    Prot, mprotect
 };
 
 
@@ -24,7 +24,7 @@ impl<T> SecKey<T> where T: Sized {
         };
         unsafe {
             copy(t, memptr, 1);
-            unprotected_mprotect(memptr, Prot::NoAccess);
+            mprotect(memptr, Prot::NoAccess);
         }
         Some(SecKey(memptr))
     }
@@ -39,9 +39,9 @@ impl<T> SecKey<T> where T: Sized {
     /// assert!(secpass.read_map(|b| b == &pass));
     /// ```
     pub fn read_map<U, F: FnOnce(&T) -> U>(&self, f: F) -> U {
-        unsafe { unprotected_mprotect(self.0, Prot::ReadOnly) };
+        unsafe { mprotect(self.0, Prot::ReadOnly) };
         let output = f(unsafe { &*self.0 });
-        unsafe { unprotected_mprotect(self.0, Prot::NoAccess) };
+        unsafe { mprotect(self.0, Prot::NoAccess) };
         output
     }
 
@@ -61,9 +61,9 @@ impl<T> SecKey<T> where T: Sized {
     /// assert_eq!(bs, [0, 8, 8, 8, 8, 8, 8, 8]);
     /// ```
     pub fn write_map<U, F: FnOnce(&mut T) -> U>(&mut self, f: F) -> U {
-        unsafe { unprotected_mprotect(self.0, Prot::ReadWrite) };
+        unsafe { mprotect(self.0, Prot::ReadWrite) };
         let output = f(unsafe { &mut *self.0 });
-        unsafe { unprotected_mprotect(self.0, Prot::NoAccess) };
+        unsafe { mprotect(self.0, Prot::NoAccess) };
         output
     }
 }

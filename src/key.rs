@@ -49,7 +49,7 @@ impl<T: Sized> PartialEq<T> for Key<T> {
 
 impl<T: Sized> PartialEq<Key<T>> for Key<T> {
     fn eq(&self, &Key(ref rhs): &Key<T>) -> bool {
-        unsafe { memcmp(&self.0, rhs, size_of::<T>()) == 0 }
+        self == rhs
     }
 }
 
