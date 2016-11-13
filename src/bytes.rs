@@ -14,7 +14,6 @@ use memsec::{ memcmp, mlock, munlock };
 ///
 /// assert_eq!(bytes, [8; 8]);
 /// ```
-#[derive(Clone)]
 pub struct Bytes(Vec<u8>);
 
 impl Bytes {
@@ -55,6 +54,12 @@ impl Deref for Bytes {
 impl DerefMut for Bytes {
     fn deref_mut(&mut self) -> &mut [u8] {
         self.0.as_mut_slice()
+    }
+}
+
+impl Clone for Bytes {
+    fn clone(&self) -> Bytes {
+        Bytes::from(self.0.clone())
     }
 }
 
