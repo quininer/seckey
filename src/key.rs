@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ptr::copy;
 use std::mem::{ uninitialized, size_of };
-use memsec::{ memcmp, mlock, munlock };
+use memsec::{ memeq, mlock, munlock };
 
 
 /// Temporary Key.
@@ -43,7 +43,7 @@ impl<T> fmt::Debug for Key<T> {
 
 impl<T: Sized> PartialEq<T> for Key<T> {
     fn eq(&self, rhs: &T) -> bool {
-        unsafe { memcmp(&self.0, rhs, size_of::<T>()) == 0 }
+        unsafe { memeq(&self.0, rhs, size_of::<T>()) }
     }
 }
 

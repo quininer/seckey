@@ -71,7 +71,7 @@ impl<T> SecKey<T> where T: Sized {
 impl<T> From<T> for SecKey<T> {
     fn from(mut t: T) -> SecKey<T> {
         let output = SecKey::new(&t).unwrap();
-        unsafe { memzero(&mut t, size_of::<T>()) };
+        unsafe { memzero(&mut t, size_of::<T>()) }; // XXX if `Drop` ?
         output
     }
 }

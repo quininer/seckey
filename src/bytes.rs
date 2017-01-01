@@ -1,7 +1,7 @@
 use std::fmt;
 use std::iter::repeat;
 use std::ops::{ Deref, DerefMut };
-use memsec::{ memcmp, mlock, munlock };
+use memsec::{ memeq, mlock, munlock };
 
 
 /// Temporary Bytes.
@@ -86,7 +86,7 @@ impl PartialEq<[u8]> for Bytes {
     /// Constant time eq.
     fn eq(&self, rhs: &[u8]) -> bool {
         if self.0.len() == rhs.len() {
-            unsafe { memcmp(self.0.as_ptr(), rhs.as_ptr(), self.0.len()) == 0 }
+            unsafe { memeq(self.0.as_ptr(), rhs.as_ptr(), self.0.len()) }
         } else {
             false
         }
