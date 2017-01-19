@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::{ Deref, DerefMut };
 use std::ptr::copy;
 use std::mem::size_of;
 use memsec::{
@@ -29,42 +30,36 @@ impl<T> SecKey<T> where T: Sized {
         Some(SecKey(memptr))
     }
 
-    /// Map read. returns closure return value.
+    /// Borrow Read.
     ///
     /// ```
     /// use seckey::SecKey;
     ///
     /// let mut pass: [u8; 8] = [8; 8];
     /// let secpass = SecKey::new(&pass).unwrap();
-    /// assert!(secpass.read_map(|b| b == &pass));
+    /// assert_eq!(pass, *secpass.read());
     /// ```
-    pub fn read_map<U, F: FnOnce(&T) -> U>(&self, f: F) -> U {
+    #[inline]
+    pub fn read(&self) -> SecReadGuard<T> {
         unsafe { mprotect(self.0, Prot::ReadOnly) };
-        let output = f(unsafe { &*self.0 });
-        unsafe { mprotect(self.0, Prot::NoAccess) };
-        output
+        SecReadGuard(unsafe { &mut *self.0 })
     }
 
-    /// Map write. returns closure return value.
+    /// Borrow Write.
     ///
     /// ```
     /// # use seckey::SecKey;
     /// #
     /// # let mut pass: [u8; 8] = [8; 8];
     /// # let mut secpass = SecKey::new(&pass).unwrap();
-    /// secpass.write_map(|bs| bs[0] = 0);
-    /// let bs = secpass.read_map(|bs| {
-    ///     let mut pass = [0; 8];
-    ///     pass.clone_from_slice(bs);
-    ///     pass
-    /// });
-    /// assert_eq!(bs, [0, 8, 8, 8, 8, 8, 8, 8]);
+    /// let mut wpass = secpass.write();
+    /// wpass[0] = 0;
+    /// assert_eq!([0, 8, 8, 8, 8, 8, 8, 8], *wpass);
     /// ```
-    pub fn write_map<U, F: FnOnce(&mut T) -> U>(&mut self, f: F) -> U {
+    #[inline]
+    pub fn write(&mut self) -> SecWriteGuard<T> {
         unsafe { mprotect(self.0, Prot::ReadWrite) };
-        let output = f(unsafe { &mut *self.0 });
-        unsafe { mprotect(self.0, Prot::NoAccess) };
-        output
+        SecWriteGuard(unsafe { &mut *self.0 })
     }
 }
 
@@ -85,5 +80,45 @@ impl<T> fmt::Debug for SecKey<T> {
 impl<T> Drop for SecKey<T> {
     fn drop(&mut self) {
         unsafe { free(self.0) }
+    }
+}
+
+
+/// Read Guard.
+pub struct SecReadGuard<'a, T: Sized + 'a>(&'a mut T);
+
+impl<'a, T: Sized + 'a> Deref for SecReadGuard<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        self.0
+    }
+}
+
+impl<'a, T: Sized + 'a> Drop for SecReadGuard<'a, T> {
+    fn drop(&mut self) {
+        unsafe { mprotect(self.0, Prot::NoAccess) };
+    }
+}
+
+
+/// Write Guard.
+pub struct SecWriteGuard<'a, T: Sized + 'a>(&'a mut T);
+
+impl<'a, T: Sized + 'a> Deref for SecWriteGuard<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        self.0
+    }
+}
+
+impl<'a, T: Sized + 'a> DerefMut for SecWriteGuard<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
+
+impl<'a, T: Sized + 'a> Drop for SecWriteGuard<'a, T> {
+    fn drop(&mut self) {
+        unsafe { mprotect(self.0, Prot::NoAccess) };
     }
 }

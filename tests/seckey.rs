@@ -20,7 +20,9 @@ fn protect_seckey_test() {
 
     let mut secpass = SecKey::new(&[1; 8]).unwrap();
 
-    let (bs_ptr, bs_len) = secpass.write_map(|bs| (bs.as_mut_ptr(), bs.len())); // violence get secpass ptr
+    let mut wpass = secpass.write();
+    let (bs_ptr, bs_len) = (wpass.as_mut_ptr(), wpass.len()); // violence get secpass ptr
     let bs_bytes = unsafe { slice::from_raw_parts_mut(bs_ptr, bs_len) };
+    drop(wpass);
     bs_bytes[0] = 0; // SIGSEGV !
 }

@@ -10,7 +10,7 @@ use memsec::{ memeq, mlock, munlock };
 /// use seckey::{ SecKey, Bytes };
 ///
 /// let secpass = SecKey::new(&[8; 8]).unwrap();
-/// let bytes = secpass.read_map(|b| Bytes::new(b));
+/// let bytes = Bytes::new(&secpass.read()[..]);
 ///
 /// assert_eq!(bytes, [8; 8]);
 /// ```
