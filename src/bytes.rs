@@ -1,7 +1,8 @@
 use std::fmt;
+use std::cmp::{ Ordering, min };
 use std::iter::repeat;
 use std::ops::{ Deref, DerefMut };
-use memsec::{ memeq, mlock, munlock };
+use memsec::{ memeq, memcmp, mlock, munlock };
 
 
 /// Temporary Bytes.
@@ -85,15 +86,47 @@ impl<A: AsRef<[u8]>> PartialEq<A> for Bytes {
 impl PartialEq<[u8]> for Bytes {
     /// Constant time eq.
     fn eq(&self, rhs: &[u8]) -> bool {
-        if self.0.len() == rhs.len() {
-            unsafe { memeq(self.0.as_ptr(), rhs.as_ptr(), self.0.len()) }
-        } else {
-            false
-        }
+        let output = unsafe { memeq(
+            self.0.as_ptr(), rhs.as_ptr(),
+            min(self.0.len(), rhs.len())
+        ) };
+
+        self.0.len() == rhs.len() && output
     }
 }
 
 impl Eq for Bytes {}
+
+impl<A: AsRef<[u8]>> PartialOrd<A> for Bytes {
+    fn partial_cmp(&self, rhs: &A) -> Option<Ordering> {
+        self.partial_cmp(rhs.as_ref())
+    }
+}
+
+impl PartialOrd<[u8]> for Bytes {
+    fn partial_cmp(&self, rhs: &[u8]) -> Option<Ordering> {
+        let order = unsafe { memcmp(
+            self.0.as_ptr(), rhs.as_ptr(),
+            min(self.0.len(), rhs.len())
+        ) };
+        if order == 0 {
+            Some(self.0.len().cmp(&rhs.len()))
+        } else if order < 0 {
+            Some(Ordering::Less)
+        } else {
+            Some(Ordering::Greater)
+        }
+    }
+}
+
+impl Ord for Bytes {
+    fn cmp(&self, rhs: &Bytes) -> Ordering {
+        match self.partial_cmp(rhs.as_ref()) {
+            Some(order) => order,
+            None => unreachable!()
+        }
+    }
+}
 
 impl Drop for Bytes {
     /// When drop, it will call `munlock`.
