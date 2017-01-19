@@ -41,8 +41,7 @@ impl<T> SecKey<T> where T: Sized {
     /// ```
     #[inline]
     pub fn read(&self) -> SecReadGuard<T> {
-        unsafe { mprotect(self.0, Prot::ReadOnly) };
-        SecReadGuard(unsafe { &mut *self.0 })
+        SecReadGuard(unsafe { &*self.0 })
     }
 
     /// Borrow Write.
@@ -58,7 +57,6 @@ impl<T> SecKey<T> where T: Sized {
     /// ```
     #[inline]
     pub fn write(&mut self) -> SecWriteGuard<T> {
-        unsafe { mprotect(self.0, Prot::ReadWrite) };
         SecWriteGuard(unsafe { &mut *self.0 })
     }
 }
@@ -85,18 +83,19 @@ impl<T> Drop for SecKey<T> {
 
 
 /// Read Guard.
-pub struct SecReadGuard<'a, T: Sized + 'a>(&'a mut T);
+pub struct SecReadGuard<'a, T: Sized + 'a>(&'a T);
 
 impl<'a, T: Sized + 'a> Deref for SecReadGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
+        unsafe { mprotect(self.0 as *const _ as *mut T, Prot::ReadOnly) };
         self.0
     }
 }
 
 impl<'a, T: Sized + 'a> Drop for SecReadGuard<'a, T> {
     fn drop(&mut self) {
-        unsafe { mprotect(self.0, Prot::NoAccess) };
+        unsafe { mprotect(self.0 as *const _ as *mut T, Prot::NoAccess) };
     }
 }
 
@@ -107,12 +106,14 @@ pub struct SecWriteGuard<'a, T: Sized + 'a>(&'a mut T);
 impl<'a, T: Sized + 'a> Deref for SecWriteGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
+        unsafe { mprotect(self.0 as *const _ as *mut T, Prot::ReadOnly) };
         self.0
     }
 }
 
 impl<'a, T: Sized + 'a> DerefMut for SecWriteGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
+        unsafe { mprotect(self.0, Prot::ReadWrite) };
         self.0
     }
 }

@@ -26,3 +26,18 @@ fn protect_seckey_test() {
     drop(wpass);
     bs_bytes[0] = 0; // SIGSEGV !
 }
+
+#[test]
+fn seckey_read_then_read() {
+    let secpass = SecKey::new(&1).unwrap();
+
+    let rpass1 = secpass.read();
+    let rpass2 = secpass.read();
+
+    assert_eq!(1, *rpass1);
+    assert_eq!(1, *rpass2);
+
+    drop(rpass1);
+
+    assert_eq!(1, *rpass2);
+}
