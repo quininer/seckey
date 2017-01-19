@@ -121,10 +121,7 @@ impl PartialOrd<[u8]> for Bytes {
 
 impl Ord for Bytes {
     fn cmp(&self, rhs: &Bytes) -> Ordering {
-        match self.partial_cmp(rhs.as_ref()) {
-            Some(order) => order,
-            None => unreachable!()
-        }
+        self.partial_cmp(rhs.as_ref()).expect("unreachable!")
     }
 }
 

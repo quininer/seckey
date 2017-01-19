@@ -2,6 +2,7 @@ use std::fmt;
 use std::ops::{ Deref, DerefMut };
 use std::ptr::copy;
 use std::mem::size_of;
+use std::cell::Cell;
 use memsec::{
     memzero,
     malloc, free,
@@ -15,7 +16,10 @@ use memsec::{
 /// When you need the password stored in the memory, you should use it.
 ///
 /// More docs see [Secure memory · libsodium](https://download.libsodium.org/doc/helpers/memory_management.html).
-pub struct SecKey<T: Sized>(*mut T);
+pub struct SecKey<T: Sized> {
+    ptr: *mut T,
+    count: Cell<usize>
+}
 
 impl<T> SecKey<T> where T: Sized {
     pub fn new(t: &T) -> Option<SecKey<T>> {
@@ -27,7 +31,34 @@ impl<T> SecKey<T> where T: Sized {
             copy(t, memptr, 1);
             mprotect(memptr, Prot::NoAccess);
         }
-        Some(SecKey(memptr))
+        Some(SecKey {
+            ptr: memptr,
+            count: Cell::new(0)
+        })
+    }
+
+    fn read_unlock(&self) {
+        let count = self.count.get();
+        self.count.set(count + 1);
+        if count == 0 {
+            unsafe { mprotect(self.ptr, Prot::ReadOnly) };
+        }
+    }
+
+    fn write_unlock(&self) {
+        let count = self.count.get();
+        self.count.set(count + 1);
+        if count == 0 {
+            unsafe { mprotect(self.ptr, Prot::ReadWrite) };
+        }
+    }
+
+    fn lock(&self) {
+        let count = self.count.get();
+        self.count.set(count - 1);
+        if count == 1 {
+            unsafe { mprotect(self.ptr, Prot::NoAccess) };
+        }
     }
 
     /// Borrow Read.
@@ -41,7 +72,8 @@ impl<T> SecKey<T> where T: Sized {
     /// ```
     #[inline]
     pub fn read(&self) -> SecReadGuard<T> {
-        SecReadGuard(unsafe { &*self.0 })
+        self.read_unlock();
+        SecReadGuard(self)
     }
 
     /// Borrow Write.
@@ -57,7 +89,8 @@ impl<T> SecKey<T> where T: Sized {
     /// ```
     #[inline]
     pub fn write(&mut self) -> SecWriteGuard<T> {
-        SecWriteGuard(unsafe { &mut *self.0 })
+        self.write_unlock();
+        SecWriteGuard(self)
     }
 }
 
@@ -77,49 +110,46 @@ impl<T> fmt::Debug for SecKey<T> {
 
 impl<T> Drop for SecKey<T> {
     fn drop(&mut self) {
-        unsafe { free(self.0) }
+        unsafe { free(self.ptr) }
     }
 }
 
 
 /// Read Guard.
-pub struct SecReadGuard<'a, T: Sized + 'a>(&'a T);
+pub struct SecReadGuard<'a, T: Sized + 'a>(&'a SecKey<T>);
 
 impl<'a, T: Sized + 'a> Deref for SecReadGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { mprotect(self.0 as *const _ as *mut T, Prot::ReadOnly) };
-        self.0
+        unsafe { &*self.0.ptr }
     }
 }
 
 impl<'a, T: Sized + 'a> Drop for SecReadGuard<'a, T> {
     fn drop(&mut self) {
-        unsafe { mprotect(self.0 as *const _ as *mut T, Prot::NoAccess) };
+        self.0.lock();
     }
 }
 
 
 /// Write Guard.
-pub struct SecWriteGuard<'a, T: Sized + 'a>(&'a mut T);
+pub struct SecWriteGuard<'a, T: Sized + 'a>(&'a mut SecKey<T>);
 
 impl<'a, T: Sized + 'a> Deref for SecWriteGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { mprotect(self.0 as *const _ as *mut T, Prot::ReadOnly) };
-        self.0
+        unsafe { &*self.0.ptr }
     }
 }
 
 impl<'a, T: Sized + 'a> DerefMut for SecWriteGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { mprotect(self.0, Prot::ReadWrite) };
-        self.0
+        unsafe { &mut *self.0.ptr }
     }
 }
 
 impl<'a, T: Sized + 'a> Drop for SecWriteGuard<'a, T> {
     fn drop(&mut self) {
-        unsafe { mprotect(self.0, Prot::NoAccess) };
+        self.0.lock();
     }
 }
