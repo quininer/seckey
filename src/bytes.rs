@@ -8,10 +8,9 @@ use memsec::{ memeq, memcmp, mlock, munlock };
 /// Temporary Bytes.
 ///
 /// ```
-/// use seckey::{ SecKey, Bytes };
+/// use seckey::Bytes;
 ///
-/// let secpass = SecKey::new(&[8; 8]).unwrap();
-/// let bytes = Bytes::new(&secpass.read()[..]);
+/// let bytes = Bytes::new(&[8; 8]);
 ///
 /// assert_eq!(bytes, [8; 8]);
 /// ```
@@ -104,6 +103,7 @@ impl<A: AsRef<[u8]>> PartialOrd<A> for Bytes {
 }
 
 impl PartialOrd<[u8]> for Bytes {
+    /// Constant time cmp.
     fn partial_cmp(&self, rhs: &[u8]) -> Option<Ordering> {
         let order = unsafe { memcmp(
             self.0.as_ptr(), rhs.as_ptr(),
