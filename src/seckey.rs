@@ -1,7 +1,7 @@
 use std::{ fmt, mem };
 use std::ops::{ Deref, DerefMut };
 use std::cell::Cell;
-use memsec::{ memzero, malloc, free, Prot, mprotect };
+use memsec::{ memzero, malloc, free, mprotect, Prot };
 #[cfg(feature = "place")] use std::ops::{ Place, Placer, InPlace };
 
 
@@ -51,6 +51,7 @@ impl<T> InPlace<T> for SecPtr<T> {
     type Owner = SecKey<T>;
 
     unsafe fn finalize(self) -> Self::Owner {
+        mprotect(self.0, Prot::NoAccess);
         SecKey {
             ptr: self.0,
             count: Cell::new(0)
