@@ -1,4 +1,5 @@
 use std::{ fmt, mem };
+use std::borrow::{ Borrow, BorrowMut };
 use memsec::{ memeq, mlock, munlock };
 
 
@@ -19,6 +20,18 @@ impl<T> From<T> for Key<T> {
     fn from(mut t: T) -> Key<T> {
         unsafe { mlock(&mut t, mem::size_of::<T>()) };
         Key(t)
+    }
+}
+
+impl<T> Borrow<T> for Key<T> {
+    fn borrow(&self) -> &T {
+        &self.0
+    }
+}
+
+impl<T> BorrowMut<T> for Key<T> {
+    fn borrow_mut(&mut self) -> &mut T {
+        &mut self.0
     }
 }
 
@@ -43,7 +56,7 @@ impl<T: Sized> PartialEq<T> for Key<T> {
 
 impl<T: Sized> PartialEq<Key<T>> for Key<T> {
     fn eq(&self, &Key(ref rhs): &Key<T>) -> bool {
-        self == rhs
+        self.eq(rhs)
     }
 }
 
