@@ -42,6 +42,12 @@ impl<T> Default for Key<T> where T: Default {
     }
 }
 
+impl<T> Clone for Key<T> where T: Clone {
+    fn clone(&self) -> Key<T> {
+        Key::from(self.0.clone())
+    }
+}
+
 impl<T> fmt::Debug for Key<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "** tmp key **")

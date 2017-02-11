@@ -27,11 +27,18 @@ impl Bytes {
     /// Create a empty Bytes.
     #[inline]
     pub fn empty() -> Bytes {
+        Self::default()
+    }
+}
+
+impl Default for Bytes {
+    fn default() -> Bytes {
         Bytes(Vec::new())
     }
 }
 
 impl From<Vec<u8>> for Bytes {
+    #[inline]
     fn from(mut t: Vec<u8>) -> Bytes {
         unsafe { mlock(t.as_mut_ptr(), t.len()) };
         Bytes(t)
@@ -39,6 +46,7 @@ impl From<Vec<u8>> for Bytes {
 }
 
 impl<'a> From<&'a [u8]> for Bytes {
+    #[inline]
     fn from(t: &'a [u8]) -> Bytes {
         Bytes::new(t)
     }
@@ -65,7 +73,10 @@ impl Clone for Bytes {
 
 impl fmt::Debug for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", repeat('*').take(self.0.len()).collect::<String>())
+        match self.len() {
+            0 => write!(f, "** empty **"),
+            len => write!(f, "{}", repeat('*').take(len).collect::<String>())
+        }
     }
 }
 
@@ -86,11 +97,11 @@ impl PartialEq<[u8]> for Bytes {
     /// Constant time eq.
     fn eq(&self, rhs: &[u8]) -> bool {
         let output = unsafe { memeq(
-            self.0.as_ptr(), rhs.as_ptr(),
-            min(self.0.len(), rhs.len())
+            self.as_ptr(), rhs.as_ptr(),
+            min(self.len(), rhs.len())
         ) };
 
-        self.0.len() == rhs.len() && output
+        self.len() == rhs.len() && output
     }
 }
 
@@ -106,11 +117,11 @@ impl PartialOrd<[u8]> for Bytes {
     /// Constant time cmp.
     fn partial_cmp(&self, rhs: &[u8]) -> Option<Ordering> {
         let order = unsafe { memcmp(
-            self.0.as_ptr(), rhs.as_ptr(),
-            min(self.0.len(), rhs.len())
+            self.as_ptr(), rhs.as_ptr(),
+            min(self.len(), rhs.len())
         ) };
         if order == 0 {
-            Some(self.0.len().cmp(&rhs.len()))
+            Some(self.len().cmp(&rhs.len()))
         } else if order < 0 {
             Some(Ordering::Less)
         } else {
