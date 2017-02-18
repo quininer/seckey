@@ -35,7 +35,7 @@ impl<T: Sized> Placer<T> for SecHeap {
     type Place = SecPtr<T>;
 
     fn make_place(self) -> Self::Place {
-        SecPtr(unsafe { malloc(mem::size_of::<T>()).expect("malloc fail.") })
+        SecPtr(unsafe { malloc(mem::size_of::<T>()).expect("memsec::malloc fail.") })
     }
 }
 
@@ -56,6 +56,12 @@ impl<T> InPlace<T> for SecPtr<T> {
             ptr: self.0,
             count: Cell::new(0)
         }
+    }
+}
+
+impl<T> Default for SecKey<T> where T: Default {
+    fn default() -> Self {
+        SecKey::new(T::default()).expect("memsec::malloc fail.")
     }
 }
 
