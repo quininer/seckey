@@ -124,11 +124,10 @@ fn seckey_drop() {
         fn drop(&mut self) {
             unsafe {
                 X += 1;
-                if X == 2 {
-                    assert_eq!(self.0, 0);
-                } else {
-                    assert_eq!(self.0, X);
-                }
+                assert_eq!(
+                    self.0,
+                    if X == 2 { 0 } else { X }
+                );
             }
         }
     }

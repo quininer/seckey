@@ -75,9 +75,13 @@ impl<T> SecKey<T> where T: Sized {
     /// ```
     pub fn new(mut t: T) -> Option<SecKey<T>> {
         unsafe {
-            let output = Self::from_raw(&mut t);
-            mem::forget(t);
-            output
+            match Self::from_raw(&mut t) {
+                Some(output) => {
+                    mem::forget(t);
+                    Some(output)
+                },
+                None => None
+            }
         }
     }
 
@@ -94,7 +98,7 @@ impl<T> SecKey<T> where T: Sized {
             Some(memptr) => memptr,
             None => return None
         };
-        ptr::copy(t, memptr, 1);
+        ptr::copy_nonoverlapping(t, memptr, 1);
         memzero(t, mem::size_of::<T>());
         mprotect(memptr, Prot::NoAccess);
 
