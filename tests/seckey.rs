@@ -46,7 +46,7 @@ fn protect_seckey_test() {
     );
     unsafe { signal::sigaction(signal::SIGSEGV, &sigaction).ok() };
 
-    let mut secpass = SecKey::new(&[1; 8]).unwrap();
+    let mut secpass = SecKey::new([1; 8]).unwrap();
 
     let mut wpass = secpass.write();
     let bs_bytes = unsafe {
@@ -79,7 +79,7 @@ fn place_seckey_read_then_read() {
 fn seckey_read_then_read() {
     use seckey::SecKey;
 
-    let secpass = SecKey::new(&1).unwrap();
+    let secpass = SecKey::new(1).unwrap();
 
     let rpass1 = secpass.read();
     let rpass2 = secpass.read();
@@ -90,4 +90,65 @@ fn seckey_read_then_read() {
     drop(rpass1);
 
     assert_eq!(1, *rpass2);
+}
+
+#[cfg(feature = "place")]
+#[test]
+fn place_seckey_drop() {
+    use seckey::SecHeap;
+
+    static mut X: bool = false;
+
+    struct Bar;
+    impl Drop for Bar {
+        fn drop(&mut self) {
+            unsafe { X = true; }
+        }
+    }
+
+    let bar = SecHeap <- Bar;
+    drop(bar); // first `Drop`
+
+    assert!(unsafe { X });
+}
+
+#[test]
+fn seckey_drop() {
+    use seckey::SecKey;
+
+    static mut X: usize = 0;
+
+    struct Bar(usize);
+    struct Baz<T>(T);
+    impl Drop for Bar {
+        fn drop(&mut self) {
+            unsafe {
+                X += 1;
+                if X == 2 {
+                    assert_eq!(self.0, 0);
+                } else {
+                    assert_eq!(self.0, X);
+                }
+            }
+        }
+    }
+
+    let bar = Bar(1);
+    let bar2 = SecKey::new(bar).unwrap();
+    drop(bar2); // first `Drop`
+
+    assert_eq!(unsafe { X }, 1);
+
+    let mut bar = Bar(3);
+    let bar3 = unsafe { SecKey::from_raw(&mut bar).unwrap() };
+    drop(bar);  // second `Drop`, memzero
+    drop(bar3); // third `Drop`
+
+    assert_eq!(unsafe { X }, 3);
+
+    let baz = Baz(Bar(4));
+    let baz2 = SecKey::new(baz).unwrap();
+    drop(baz2); // fourth `Drop`
+
+    assert_eq!(unsafe { X }, 4);
 }

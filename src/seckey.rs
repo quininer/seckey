@@ -1,4 +1,4 @@
-use std::{ fmt, mem };
+use std::{ fmt, mem, ptr };
 use std::ops::{ Deref, DerefMut };
 use std::cell::Cell;
 use memsec::{ memzero, malloc, free, mprotect, Prot };
@@ -21,8 +21,8 @@ pub struct SecKey<T> {
 /// # fn main() {
 /// use seckey::SecHeap;
 ///
-/// let k = SecHeap <- 1;
-/// assert_eq!(1, *k.read());
+/// let k = SecHeap <- [1];
+/// assert_eq!([1], *k.read());
 /// # }
 /// ```
 #[cfg(feature = "place")]
@@ -59,46 +59,36 @@ impl<T> InPlace<T> for SecPtr<T> {
     }
 }
 
-impl<T> SecKey<T> where T: Clone {
-    /// ```
-    /// use seckey::SecKey;
-    ///
-    /// let v = 1;
-    /// let k = SecKey::new(&v).unwrap();
-    /// assert_eq!(1, *k.read());
-    /// ```
-    pub fn new(t: &T) -> Option<SecKey<T>> {
-        unsafe {
-            let memptr: *mut T = match malloc(mem::size_of::<T>()) {
-                Some(memptr) => memptr,
-                None => return None
-            };
-            (*memptr).clone_from(t);
-            mprotect(memptr, Prot::NoAccess);
-
-            Some(SecKey {
-                ptr: memptr,
-                count: Cell::new(0)
-            })
-        }
-    }
-}
-
 impl<T> SecKey<T> where T: Sized {
     /// ```
     /// use seckey::SecKey;
     ///
-    /// let mut v = 1;
-    /// let k = unsafe { SecKey::from_ptr(&mut v).unwrap() };
-    /// assert_eq!(0, v);
-    /// assert_eq!(1, *k.read());
+    /// let v = [1];
+    /// let k = SecKey::new(v).unwrap();
+    /// assert_eq!([1], *k.read());
     /// ```
-    pub unsafe fn from_ptr(t: *mut T) -> Option<SecKey<T>> {
+    pub fn new(mut t: T) -> Option<SecKey<T>> {
+        unsafe {
+            let output = Self::from_raw(&mut t);
+            mem::forget(t);
+            output
+        }
+    }
+
+    /// ```
+    /// use seckey::SecKey;
+    ///
+    /// let mut v = [1];
+    /// let k = unsafe { SecKey::from_raw(&mut v).unwrap() };
+    /// assert_eq!([0], v);
+    /// assert_eq!([1], *k.read());
+    /// ```
+    pub unsafe fn from_raw(t: *mut T) -> Option<SecKey<T>> {
         let memptr: *mut T = match malloc(mem::size_of::<T>()) {
             Some(memptr) => memptr,
             None => return None
         };
-        ::std::ptr::copy(t, memptr, 1);
+        ptr::copy(t, memptr, 1);
         memzero(t, mem::size_of::<T>());
         mprotect(memptr, Prot::NoAccess);
 
@@ -139,9 +129,8 @@ impl<T> SecKey<T> {
     /// ```
     /// use seckey::SecKey;
     ///
-    /// let mut pass: [u8; 8] = [8; 8];
-    /// let secpass = SecKey::new(&pass).unwrap();
-    /// assert_eq!(pass, *secpass.read());
+    /// let secpass = SecKey::new([8u8; 8]).unwrap();
+    /// assert_eq!([8u8; 8], *secpass.read());
     /// ```
     #[inline]
     pub fn read(&self) -> SecReadGuard<T> {
@@ -154,8 +143,7 @@ impl<T> SecKey<T> {
     /// ```
     /// # use seckey::SecKey;
     /// #
-    /// # let mut pass: [u8; 8] = [8; 8];
-    /// # let mut secpass = SecKey::new(&pass).unwrap();
+    /// # let mut secpass = SecKey::new([8u8; 8]).unwrap();
     /// let mut wpass = secpass.write();
     /// wpass[0] = 0;
     /// assert_eq!([0, 8, 8, 8, 8, 8, 8, 8], *wpass);
@@ -181,7 +169,11 @@ impl<T> fmt::Pointer for SecKey<T> {
 
 impl<T> Drop for SecKey<T> {
     fn drop(&mut self) {
-        unsafe { free(self.ptr) }
+        unsafe {
+            mprotect(self.ptr, Prot::ReadWrite);
+            ptr::drop_in_place(self.ptr);
+            free(self.ptr);
+        }
     }
 }
 
