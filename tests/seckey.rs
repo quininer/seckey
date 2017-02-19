@@ -92,15 +92,15 @@ fn seckey_read_then_read() {
 fn seckey_drop() {
     static mut X: usize = 0;
 
-    struct Bar(usize);
-    struct Baz<T>(T);
+    #[derive(Debug)] struct Bar(usize);
+    #[derive(Debug)] struct Baz<T>(T);
     impl Drop for Bar {
         fn drop(&mut self) {
             unsafe {
                 X += 1;
                 assert_eq!(
                     self.0,
-                    if X == 2 { 0 } else { X }
+                    if X == 2 { 3 } else { X }
                 );
             }
         }
@@ -114,8 +114,8 @@ fn seckey_drop() {
     assert_eq!(unsafe { X }, 1);
 
     {
-        let mut bar = Bar(3);
-        let bar3 = unsafe { SecKey::from_raw(&mut bar).unwrap() };
+        let bar = Bar(3);
+        let bar3 = unsafe { SecKey::from_raw(&bar).unwrap() };
         drop(bar);
         drop(bar3);
     }

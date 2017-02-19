@@ -35,7 +35,10 @@ impl<T: Sized> Placer<T> for SecHeap {
     type Place = SecPtr<T>;
 
     fn make_place(self) -> Self::Place {
-        SecPtr(unsafe { malloc(mem::size_of::<T>()).expect("memsec::malloc fail.") })
+        SecPtr(unsafe {
+            malloc(mem::size_of::<T>())
+                .unwrap_or_else(|| panic!("memsec::malloc fail: {}", mem::size_of::<T>()))
+        })
     }
 }
 
@@ -61,7 +64,8 @@ impl<T> InPlace<T> for SecPtr<T> {
 
 impl<T> Default for SecKey<T> where T: Default {
     fn default() -> Self {
-        SecKey::new(T::default()).expect("memsec::malloc fail.")
+        SecKey::new(T::default())
+                .unwrap_or_else(|_| panic!("memsec::malloc fail: {}", mem::size_of::<T>()))
     }
 }
 
@@ -72,14 +76,15 @@ impl<T> SecKey<T> where T: Sized {
     /// let k = SecKey::new([1]).unwrap();
     /// assert_eq!([1], *k.read());
     /// ```
-    pub fn new(mut t: T) -> Option<SecKey<T>> {
+    pub fn new(mut t: T) -> Result<SecKey<T>, T> {
         unsafe {
-            match Self::from_raw(&mut t) {
+            match Self::from_raw(&t) {
                 Some(output) => {
+                    memzero(&mut t, mem::size_of::<T>());
                     mem::forget(t);
-                    Some(output)
+                    Ok(output)
                 },
-                None => None
+                None => Err(t)
             }
         }
     }
@@ -88,17 +93,16 @@ impl<T> SecKey<T> where T: Sized {
     /// use seckey::SecKey;
     ///
     /// let mut v = [1];
-    /// let k = unsafe { SecKey::from_raw(&mut v).unwrap() };
-    /// assert_eq!([0], v);
+    /// let k = unsafe { SecKey::from_raw(&v).unwrap() };
+    /// assert_eq!([1], v);
     /// assert_eq!([1], *k.read());
     /// ```
-    pub unsafe fn from_raw(t: *mut T) -> Option<SecKey<T>> {
+    pub unsafe fn from_raw(t: *const T) -> Option<SecKey<T>> {
         let memptr: *mut T = match malloc(mem::size_of::<T>()) {
             Some(memptr) => memptr,
             None => return None
         };
         ptr::copy_nonoverlapping(t, memptr, 1);
-        memzero(t, mem::size_of::<T>());
         mprotect(memptr, Prot::NoAccess);
 
         Some(SecKey {
