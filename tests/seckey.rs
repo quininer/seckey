@@ -4,6 +4,7 @@ extern crate seckey;
 #[cfg(unix)] extern crate nix;
 
 use std::slice;
+use seckey::SecKey;
 
 
 #[cfg(feature = "place")]
@@ -36,7 +37,6 @@ fn place_protect_seckey_test() {
 #[should_panic]
 #[test]
 fn protect_seckey_test() {
-    use seckey::SecKey;
     use nix::sys::signal;
     extern fn sigsegv(_: i32) { panic!() }
     let sigaction = signal::SigAction::new(
@@ -57,28 +57,8 @@ fn protect_seckey_test() {
     bs_bytes[0] = 0; // SIGSEGV !
 }
 
-#[cfg(feature = "place")]
-#[test]
-fn place_seckey_read_then_read() {
-    use seckey::SecHeap;
-
-    let secpass = SecHeap <- 1;
-
-    let rpass1 = secpass.read();
-    let rpass2 = secpass.read();
-
-    assert_eq!(1, *rpass1);
-    assert_eq!(1, *rpass2);
-
-    drop(rpass1);
-
-    assert_eq!(1, *rpass2);
-}
-
 #[test]
 fn seckey_read_then_read() {
-    use seckey::SecKey;
-
     let secpass = SecKey::new(1).unwrap();
 
     let rpass1 = secpass.read();
@@ -90,32 +70,26 @@ fn seckey_read_then_read() {
     drop(rpass1);
 
     assert_eq!(1, *rpass2);
-}
 
-#[cfg(feature = "place")]
-#[test]
-fn place_seckey_drop() {
-    use seckey::SecHeap;
+    #[cfg(feature = "place")]   {
+        use seckey::SecHeap;
 
-    static mut X: bool = false;
+        let secpass = SecHeap <- 1;
 
-    struct Bar;
-    impl Drop for Bar {
-        fn drop(&mut self) {
-            unsafe { X = true; }
-        }
+        let rpass1 = secpass.read();
+        let rpass2 = secpass.read();
+
+        assert_eq!(1, *rpass1);
+        assert_eq!(1, *rpass2);
+
+        drop(rpass1);
+
+        assert_eq!(1, *rpass2);
     }
-
-    let bar = SecHeap <- Bar;
-    drop(bar); // first `Drop`
-
-    assert!(unsafe { X });
 }
 
 #[test]
 fn seckey_drop() {
-    use seckey::SecKey;
-
     static mut X: usize = 0;
 
     struct Bar(usize);
@@ -132,22 +106,35 @@ fn seckey_drop() {
         }
     }
 
-    let bar = Bar(1);
-    let bar2 = SecKey::new(bar).unwrap();
-    drop(bar2); // first `Drop`
-
+    {
+        let bar = Bar(1);
+        let bar2 = SecKey::new(bar).unwrap();
+        drop(bar2);
+    }
     assert_eq!(unsafe { X }, 1);
 
-    let mut bar = Bar(3);
-    let bar3 = unsafe { SecKey::from_raw(&mut bar).unwrap() };
-    drop(bar);  // second `Drop`, memzero
-    drop(bar3); // third `Drop`
-
+    {
+        let mut bar = Bar(3);
+        let bar3 = unsafe { SecKey::from_raw(&mut bar).unwrap() };
+        drop(bar);
+        drop(bar3);
+    }
     assert_eq!(unsafe { X }, 3);
 
-    let baz = Baz(Bar(4));
-    let baz2 = SecKey::new(baz).unwrap();
-    drop(baz2); // fourth `Drop`
-
+    {
+        let baz = Baz(Bar(4));
+        let baz2 = SecKey::new(baz).unwrap();
+        drop(baz2);
+    }
     assert_eq!(unsafe { X }, 4);
+
+    #[cfg(feature = "place")] {
+        use seckey::SecHeap;
+
+        {
+            let bar5 = SecHeap <- Bar(5);
+            drop(bar5);
+        }
+        assert_eq!(unsafe { X }, 5);
+    }
 }

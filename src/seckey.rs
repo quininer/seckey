@@ -69,8 +69,7 @@ impl<T> SecKey<T> where T: Sized {
     /// ```
     /// use seckey::SecKey;
     ///
-    /// let v = [1];
-    /// let k = SecKey::new(v).unwrap();
+    /// let k = SecKey::new([1]).unwrap();
     /// assert_eq!([1], *k.read());
     /// ```
     pub fn new(mut t: T) -> Option<SecKey<T>> {
@@ -129,7 +128,7 @@ impl<T> SecKey<T> {
     fn lock(&self) {
         let count = self.count.get();
         self.count.set(count - 1);
-        if count == 1 {
+        if count <= 1 {
             unsafe { mprotect(self.ptr, Prot::NoAccess) };
         }
     }
