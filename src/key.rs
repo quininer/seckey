@@ -8,17 +8,17 @@ use memsec::{ memeq, mlock, munlock };
 /// ```
 /// use seckey::Key;
 ///
-/// let key = Key::from([8; 8]);
+/// let key = unsafe { Key::from([8; 8]) };
 /// assert_eq!(key, [8u8; 8]);
 /// assert!(key != [1u8; 8]);
-/// assert_eq!(key, Key::from([8u8; 8]));
+/// assert_eq!(key, unsafe { Key::from([8u8; 8]) });
 /// ```
 pub struct Key<T: Sized>(pub T);
 
-impl<T> From<T> for Key<T> {
+impl<T> Key<T> {
     #[inline]
-    fn from(mut t: T) -> Key<T> {
-        unsafe { mlock(&mut t, mem::size_of::<T>()) };
+    pub unsafe fn from(mut t: T) -> Key<T> {
+        mlock(&mut t, mem::size_of::<T>());
         Key(t)
     }
 }
@@ -35,16 +35,18 @@ impl<T> BorrowMut<T> for Key<T> {
     }
 }
 
+/*
 impl<T> Default for Key<T> where T: Default {
     #[inline]
     fn default() -> Key<T> {
         Key::from(T::default())
     }
 }
+*/
 
 impl<T> Clone for Key<T> where T: Clone {
     fn clone(&self) -> Key<T> {
-        Key::from(self.0.clone())
+        unsafe { Key::from(self.0.clone()) }
     }
 }
 
@@ -70,6 +72,8 @@ impl<T: Sized> Eq for Key<T> {}
 
 impl<T> Drop for Key<T> where T: Sized {
     fn drop(&mut self) {
-        unsafe { munlock(&mut self.0, mem::size_of::<T>()) };
+        unsafe {
+            munlock(&mut self.0, mem::size_of::<T>());
+        }
     }
 }
