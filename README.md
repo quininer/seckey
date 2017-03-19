@@ -22,14 +22,3 @@ let secpass = SecKey::new([8u8; 8]).unwrap();
 	assert_eq!([0, 8, 8, 8, 8, 8, 8, 8], *wpass);
 }
 ```
-
-or `placement syntax`
-
-```rust
-#![feature(placement_in_syntax)]
-
-use seckey::SecHeap;
-
-let k = SecHeap <- [1];
-assert_eq!([1], *k.read());
-```

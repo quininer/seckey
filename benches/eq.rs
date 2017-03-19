@@ -9,7 +9,7 @@ use seckey::{ Bytes, Key };
 
 #[bench]
 fn key_eq_bench(b: &mut Bencher) {
-    let x = Key::from([9i32; 4096]);
+    let x = unsafe { Key::from([9i32; 4096]) };
     let y = [9i32; 4096];
 
     b.iter(|| x == y);
@@ -17,7 +17,7 @@ fn key_eq_bench(b: &mut Bencher) {
 
 #[bench]
 fn key_nq_bench(b: &mut Bencher) {
-    let x = Key::from([8i32; 4096]);
+    let x = unsafe { Key::from([8i32; 4096]) };
     let z = [33i32; 4096];
 
     b.iter(|| x == z);

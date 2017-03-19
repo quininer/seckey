@@ -1,7 +1,5 @@
 //! Use [memsec](https://github.com/quininer/memsec) protected secret memory.
 
-#![cfg_attr(feature = "place", feature(placement_new_protocol))]
-
 extern crate memsec;
 
 mod key;

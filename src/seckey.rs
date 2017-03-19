@@ -2,7 +2,6 @@ use std::{ fmt, mem, ptr };
 use std::ops::{ Deref, DerefMut };
 use std::cell::Cell;
 use memsec::{ memzero, malloc, free, mprotect, Prot };
-#[cfg(feature = "place")] use std::ops::{ Place, Placer, InPlace };
 
 
 /// Secure Key.
@@ -14,52 +13,6 @@ use memsec::{ memzero, malloc, free, mprotect, Prot };
 pub struct SecKey<T> {
     ptr: *mut T,
     count: Cell<usize>
-}
-
-/// ```
-/// #![feature(placement_in_syntax)]
-/// # fn main() {
-/// use seckey::SecHeap;
-///
-/// let k = SecHeap <- [1];
-/// assert_eq!([1], *k.read());
-/// # }
-/// ```
-#[cfg(feature = "place")]
-pub struct SecHeap;
-#[cfg(feature = "place")]
-pub struct SecPtr<T>(*mut T);
-
-#[cfg(feature = "place")]
-impl<T: Sized> Placer<T> for SecHeap {
-    type Place = SecPtr<T>;
-
-    fn make_place(self) -> Self::Place {
-        SecPtr(unsafe {
-            malloc(mem::size_of::<T>())
-                .unwrap_or_else(|| panic!("memsec::malloc fail: {}", mem::size_of::<T>()))
-        })
-    }
-}
-
-#[cfg(feature = "place")]
-impl<T> Place<T> for SecPtr<T> {
-    fn pointer(&mut self) -> *mut T {
-        self.0
-    }
-}
-
-#[cfg(feature = "place")]
-impl<T> InPlace<T> for SecPtr<T> {
-    type Owner = SecKey<T>;
-
-    unsafe fn finalize(self) -> Self::Owner {
-        mprotect(self.0, Prot::NoAccess);
-        SecKey {
-            ptr: self.0,
-            count: Cell::new(0)
-        }
-    }
 }
 
 impl<T> Default for SecKey<T> where T: Default {
