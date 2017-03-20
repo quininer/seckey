@@ -14,7 +14,7 @@ use memsec::{ memeq, mlock, munlock };
 /// assert!(key != [1u8; 8]);
 /// assert_eq!(key, Key::from([8u8; 8]));
 /// ```
-pub struct Key<T: Sized>(pub NoDrop<T>);
+pub struct Key<T: Sized>(NoDrop<T>);
 
 impl<T> Key<T> {
     #[inline]
