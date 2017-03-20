@@ -1,5 +1,6 @@
 //! Use [memsec](https://github.com/quininer/memsec) protected secret memory.
 
+extern crate nodrop;
 extern crate memsec;
 
 mod key;

@@ -10,6 +10,7 @@ fn key_drop_test() {
     impl Drop for Bar {
         fn drop(&mut self) {
             unsafe {
+                assert_ne!(self.0, 0);
                 X += self.0;
             }
         }
@@ -22,8 +23,8 @@ fn key_drop_test() {
     assert_eq!(unsafe { X }, 1);
 
     {
-        let bar = unsafe { Key::from(Bar(1)) };
+        let bar = Key::from(Bar(1));
         drop(bar);
     }
-    assert_eq!(unsafe { X }, 1);
+    assert_eq!(unsafe { X }, 2);
 }
