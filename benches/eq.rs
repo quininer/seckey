@@ -16,7 +16,7 @@ fn key_eq_bench(b: &mut Bencher) {
 }
 
 #[bench]
-fn key_nq_bench(b: &mut Bencher) {
+fn key_ne_bench(b: &mut Bencher) {
     let x = Key::from([8i32; 4096]);
     let z = [33i32; 4096];
 
@@ -32,7 +32,7 @@ fn bytes_eq_bench(b: &mut Bencher) {
 }
 
 #[bench]
-fn bytes_nq_bench(b: &mut Bencher) {
+fn bytes_ne_bench(b: &mut Bencher) {
     let x = Bytes::new(&[8u8; 4096]);
     let z = vec![33u8; 4096];
 

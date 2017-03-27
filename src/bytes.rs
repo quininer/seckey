@@ -38,7 +38,6 @@ impl Default for Bytes {
 }
 
 impl From<Vec<u8>> for Bytes {
-    #[inline]
     fn from(mut t: Vec<u8>) -> Bytes {
         unsafe { mlock(t.as_mut_ptr(), t.len()) };
         Bytes(t)
@@ -46,7 +45,6 @@ impl From<Vec<u8>> for Bytes {
 }
 
 impl<'a> From<&'a [u8]> for Bytes {
-    #[inline]
     fn from(t: &'a [u8]) -> Bytes {
         Bytes::new(t)
     }
@@ -81,7 +79,6 @@ impl fmt::Debug for Bytes {
 }
 
 impl AsRef<[u8]> for Bytes {
-    #[inline]
     fn as_ref(&self) -> &[u8] {
         self.deref()
     }
@@ -96,10 +93,9 @@ impl<A: AsRef<[u8]>> PartialEq<A> for Bytes {
 impl PartialEq<[u8]> for Bytes {
     /// Constant time eq.
     fn eq(&self, rhs: &[u8]) -> bool {
-        let output = unsafe { memeq(
-            self.as_ptr(), rhs.as_ptr(),
-            min(self.len(), rhs.len())
-        ) };
+        let output = unsafe {
+            memeq(self.as_ptr(), rhs.as_ptr(), min(self.len(), rhs.len()))
+        };
 
         self.len() == rhs.len() && output
     }
@@ -116,10 +112,9 @@ impl<A: AsRef<[u8]>> PartialOrd<A> for Bytes {
 impl PartialOrd<[u8]> for Bytes {
     /// Constant time cmp.
     fn partial_cmp(&self, rhs: &[u8]) -> Option<Ordering> {
-        let order = unsafe { memcmp(
-            self.as_ptr(), rhs.as_ptr(),
-            min(self.len(), rhs.len())
-        ) };
+        let order = unsafe {
+            memcmp(self.as_ptr(), rhs.as_ptr(), min(self.len(), rhs.len()))
+        };
         if order == 0 {
             Some(self.len().cmp(&rhs.len()))
         } else if order < 0 {
@@ -132,12 +127,11 @@ impl PartialOrd<[u8]> for Bytes {
 
 impl Ord for Bytes {
     fn cmp(&self, rhs: &Bytes) -> Ordering {
-        self.partial_cmp(rhs.as_ref()).expect("unreachable!")
+        self.partial_cmp(rhs.as_ref()).unwrap()
     }
 }
 
 impl Drop for Bytes {
-    /// When drop, it will call `munlock`.
     fn drop(&mut self) {
         unsafe { munlock(self.0.as_mut_ptr(), self.0.len()) };
     }

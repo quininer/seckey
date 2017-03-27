@@ -45,7 +45,7 @@ fn seckey_read_then_read() {
 }
 
 #[test]
-fn seckey_drop() {
+fn seckey_drop_test() {
     static mut X: usize = 0;
 
     #[derive(Debug)] struct Bar(usize);

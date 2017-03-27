@@ -1,7 +1,8 @@
 use std::{ fmt, mem, ptr };
+use std::cmp::Ordering;
 use std::borrow::{ Borrow, BorrowMut };
 use nodrop::NoDrop;
-use memsec::{ memeq, mlock, munlock };
+use memsec::{ memeq, memcmp, mlock, munlock };
 
 
 /// Temporary Key.
@@ -17,7 +18,6 @@ use memsec::{ memeq, mlock, munlock };
 pub struct Key<T: Sized>(NoDrop<T>);
 
 impl<T> Key<T> {
-    #[inline]
     pub fn from(mut t: T) -> Key<T> {
         unsafe { mlock(&mut t, mem::size_of::<T>()) };
         Key(NoDrop::new(t))
@@ -37,7 +37,6 @@ impl<T> BorrowMut<T> for Key<T> {
 }
 
 impl<T> Default for Key<T> where T: Default {
-    #[inline]
     fn default() -> Key<T> {
         Key::from(T::default())
     }
@@ -56,18 +55,48 @@ impl<T> fmt::Debug for Key<T> {
 }
 
 impl<T: Sized> PartialEq<T> for Key<T> {
+    /// Constant time eq.
+    ///
+    /// NOTE, it compare memory value.
     fn eq(&self, rhs: &T) -> bool {
         unsafe { memeq(&self.0 as &T, rhs, mem::size_of::<T>()) }
     }
 }
 
 impl<T: Sized> PartialEq<Key<T>> for Key<T> {
-    fn eq(&self, &Key(ref rhs): &Key<T>) -> bool {
-        self.eq(rhs as &T)
+    /// Constant time eq.
+    ///
+    /// NOTE, it compare memory value.
+    fn eq(&self, rhs: &Key<T>) -> bool {
+        self.eq(rhs.borrow() as &T)
     }
 }
 
 impl<T: Sized> Eq for Key<T> {}
+
+impl<T> PartialOrd<T> for Key<T> {
+    /// Constant time cmp.
+    ///
+    /// NOTE, it compare memory value.
+    fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
+        let order = unsafe {
+            memcmp(&self.0 as &T, rhs, mem::size_of::<T>())
+        };
+        Some(order.cmp(&0))
+    }
+}
+
+impl<T> PartialOrd<Key<T>> for Key<T> {
+    fn partial_cmp(&self, rhs: &Key<T>) -> Option<Ordering> {
+        self.partial_cmp(rhs.borrow() as &T)
+    }
+}
+
+impl<T> Ord for Key<T> {
+    fn cmp(&self, rhs: &Key<T>) -> Ordering {
+        self.partial_cmp(rhs).unwrap()
+    }
+}
 
 impl<T> Drop for Key<T> where T: Sized {
     fn drop(&mut self) {

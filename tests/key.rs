@@ -3,6 +3,16 @@ extern crate seckey;
 use seckey::Key;
 
 #[test]
+fn key_cmp_test() {
+    assert!(Key::from(1) > 0);
+    assert!(Key::from(0) < 1);
+    assert_eq!(Key::from(0), 0);
+
+    assert!(Key::from(-1) > 0);
+        // ^- NOTE 4294967295 > 0
+}
+
+#[test]
 fn key_drop_test() {
     static mut X: usize = 0;
 

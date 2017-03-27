@@ -7,7 +7,6 @@ use memsec::{ memzero, malloc, free, mprotect, Prot };
 /// Secure Key.
 ///
 /// The use [memsec/malloc](../../memsec/fn.malloc.html) protection secret bytes.
-/// When you need the password stored in the memory, you should use it.
 ///
 /// More docs see [Secure memory · libsodium](https://download.libsodium.org/doc/helpers/memory_management.html).
 pub struct SecKey<T> {
@@ -18,7 +17,7 @@ pub struct SecKey<T> {
 impl<T> Default for SecKey<T> where T: Default {
     fn default() -> Self {
         SecKey::new(T::default())
-                .unwrap_or_else(|_| panic!("memsec::malloc fail: {}", mem::size_of::<T>()))
+            .unwrap_or_else(|_| panic!("memsec::malloc fail: {}", mem::size_of::<T>()))
     }
 }
 
