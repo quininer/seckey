@@ -1,6 +1,6 @@
 [package]
 name = "seckey"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["quininer kel <quininer@live.com>"]
 description = "Use `memsec` protected secret memory."
 repository = "https://github.com/quininer/seckey"
@@ -8,7 +8,10 @@ license = "MIT"
 
 [dependencies]
 memsec = "0.3"
-nodrop = "0.1"
+nodrop = { version = "0.1", optional = true }
 
 [dev-dependencies]
 nix = "0.7"
+
+[features]
+default = [ "nodrop" ]

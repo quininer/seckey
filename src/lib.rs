@@ -1,7 +1,9 @@
 //! Use [memsec](https://github.com/quininer/memsec) protected secret memory.
 
-extern crate nodrop;
+#![cfg_attr(not(feature = "nodrop"), feature(manually_drop))]
+
 extern crate memsec;
+#[cfg(feature = "nodrop")] extern crate nodrop;
 
 mod key;
 mod bytes;

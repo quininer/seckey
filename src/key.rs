@@ -1,8 +1,9 @@
 use std::{ fmt, mem, ptr };
 use std::cmp::Ordering;
 use std::borrow::{ Borrow, BorrowMut };
-use nodrop::NoDrop;
 use memsec::{ memeq, memcmp, mlock, munlock };
+#[cfg(feature = "nodrop")] use nodrop::NoDrop as ManuallyDrop;
+#[cfg(not(feature = "nodrop"))] use std::mem::ManuallyDrop;
 
 
 /// Temporary Key.
@@ -10,17 +11,17 @@ use memsec::{ memeq, memcmp, mlock, munlock };
 /// ```
 /// use seckey::Key;
 ///
-/// let key = Key::from([8; 8]);
+/// let key = Key::from([8u8; 8]);
 /// assert_eq!(key, [8u8; 8]);
-/// assert!(key != [1u8; 8]);
+/// assert_ne!(key, [1u8; 8]);
 /// assert_eq!(key, Key::from([8u8; 8]));
 /// ```
-pub struct Key<T: Sized>(NoDrop<T>);
+pub struct Key<T: Sized>(ManuallyDrop<T>);
 
 impl<T> Key<T> {
     pub fn from(mut t: T) -> Key<T> {
         unsafe { mlock(&mut t, mem::size_of::<T>()) };
-        Key(NoDrop::new(t))
+        Key(ManuallyDrop::new(t))
     }
 }
 
