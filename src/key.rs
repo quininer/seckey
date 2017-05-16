@@ -1,6 +1,6 @@
 use std::{ fmt, mem, ptr };
 use std::cmp::Ordering;
-use std::borrow::{ Borrow, BorrowMut };
+use std::ops::{ Deref, DerefMut };
 use memsec::{ memeq, memcmp, mlock, munlock };
 #[cfg(feature = "nodrop")] use nodrop::NoDrop as ManuallyDrop;
 #[cfg(not(feature = "nodrop"))] use std::mem::ManuallyDrop;
@@ -25,14 +25,16 @@ impl<T> Key<T> {
     }
 }
 
-impl<T> Borrow<T> for Key<T> {
-    fn borrow(&self) -> &T {
+impl<T> Deref for Key<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
         &self.0
     }
 }
 
-impl<T> BorrowMut<T> for Key<T> {
-    fn borrow_mut(&mut self) -> &mut T {
+impl<T> DerefMut for Key<T> {
+    fn deref_mut(&mut self) -> &mut T {
         &mut self.0
     }
 }
@@ -69,7 +71,7 @@ impl<T: Sized> PartialEq<Key<T>> for Key<T> {
     ///
     /// NOTE, it compare memory value.
     fn eq(&self, rhs: &Key<T>) -> bool {
-        self.eq(rhs.borrow() as &T)
+        self.eq(rhs as &T)
     }
 }
 
@@ -89,7 +91,7 @@ impl<T> PartialOrd<T> for Key<T> {
 
 impl<T> PartialOrd<Key<T>> for Key<T> {
     fn partial_cmp(&self, rhs: &Key<T>) -> Option<Ordering> {
-        self.partial_cmp(rhs.borrow() as &T)
+        self.partial_cmp(rhs as &T)
     }
 }
 
