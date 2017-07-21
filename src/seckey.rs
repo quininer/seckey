@@ -25,8 +25,8 @@ impl<T> SecKey<T> where T: Sized {
     /// ```
     /// use seckey::SecKey;
     ///
-    /// let k = SecKey::new([1]).unwrap();
-    /// assert_eq!([1], *k.read());
+    /// let k = SecKey::new([1, 2, 3]).unwrap();
+    /// assert_eq!([1, 2, 3], *k.read());
     /// ```
     pub fn new(mut t: T) -> Result<SecKey<T>, T> {
         unsafe {
@@ -44,18 +44,31 @@ impl<T> SecKey<T> where T: Sized {
     /// ```
     /// use seckey::SecKey;
     ///
-    /// let mut v = [1];
+    /// let mut v = [1, 2, 3];
     /// let k = unsafe { SecKey::from_raw(&v).unwrap() };
-    /// assert_eq!([1], v);
-    /// assert_eq!([1], *k.read());
+    /// assert_eq!([1, 2, 3], v);
+    /// assert_eq!([1, 2, 3], *k.read());
     /// ```
     pub unsafe fn from_raw(t: *const T) -> Option<SecKey<T>> {
-        let memptr: *mut T = match malloc(mem::size_of::<T>()) {
+        Self::with(move |memptr| ptr::copy_nonoverlapping(t, memptr, 1))
+    }
+
+    /// ```
+    /// use seckey::SecKey;
+    ///
+    /// let k: SecKey<u32> = SecKey::with(|ptr| unsafe { *ptr = 1 }).unwrap();
+    /// assert_eq!(1, *k.read());
+    /// ```
+    pub fn with<F>(f: F) -> Option<SecKey<T>>
+        where F: FnOnce(*mut T)
+    {
+        let memptr: *mut T = match unsafe { malloc(mem::size_of::<T>()) } {
             Some(memptr) => memptr,
             None => return None
         };
-        ptr::copy_nonoverlapping(t, memptr, 1);
-        mprotect(memptr, Prot::NoAccess);
+
+        f(memptr);
+        unsafe { mprotect(memptr, Prot::NoAccess) };
 
         Some(SecKey {
             ptr: memptr,

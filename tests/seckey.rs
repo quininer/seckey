@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
+
 extern crate seckey;
 #[cfg(unix)] extern crate nix;
 
