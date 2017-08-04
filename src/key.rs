@@ -2,8 +2,6 @@ use std::{ fmt, mem, ptr };
 use std::cmp::Ordering;
 use std::ops::{ Deref, DerefMut };
 use memsec::{ memeq, memcmp, mlock, munlock };
-#[cfg(feature = "nodrop")] use nodrop::NoDrop as ManuallyDrop;
-#[cfg(not(feature = "nodrop"))] use std::mem::ManuallyDrop;
 
 
 /// Temporary Key.
@@ -16,12 +14,13 @@ use memsec::{ memeq, memcmp, mlock, munlock };
 /// assert_ne!(key, [1u8; 8]);
 /// assert_eq!(key, Key::from([8u8; 8]));
 /// ```
-pub struct Key<T: Sized>(ManuallyDrop<T>);
+pub struct Key<T: Sized>(*mut T);
 
 impl<T> Key<T> {
-    pub fn from(mut t: T) -> Key<T> {
-        unsafe { mlock(&mut t, mem::size_of::<T>()) };
-        Key(ManuallyDrop::new(t))
+    pub fn from(t: T) -> Key<T> {
+        let box_ptr = Box::into_raw(Box::new(t));
+        unsafe { mlock(box_ptr, mem::size_of::<T>()) };
+        Key(box_ptr)
     }
 }
 
@@ -29,13 +28,13 @@ impl<T> Deref for Key<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &self.0
+        unsafe { &*self.0 }
     }
 }
 
 impl<T> DerefMut for Key<T> {
     fn deref_mut(&mut self) -> &mut T {
-        &mut self.0
+        unsafe { &mut *self.0 }
     }
 }
 
@@ -47,7 +46,7 @@ impl<T> Default for Key<T> where T: Default {
 
 impl<T> Clone for Key<T> where T: Clone {
     fn clone(&self) -> Key<T> {
-        Key::from(self.0.clone())
+        unsafe { Key::from((*self.0).clone()) }
     }
 }
 
@@ -62,7 +61,7 @@ impl<T: Sized> PartialEq<T> for Key<T> {
     ///
     /// NOTE, it compare memory value.
     fn eq(&self, rhs: &T) -> bool {
-        unsafe { memeq(&self.0 as &T, rhs, mem::size_of::<T>()) }
+        unsafe { memeq(self.0, rhs, mem::size_of::<T>()) }
     }
 }
 
@@ -83,7 +82,7 @@ impl<T> PartialOrd<T> for Key<T> {
     /// NOTE, it compare memory value.
     fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
         let order = unsafe {
-            memcmp(&self.0 as &T, rhs, mem::size_of::<T>())
+            memcmp(self.0, rhs, mem::size_of::<T>())
         };
         Some(order.cmp(&0))
     }
@@ -104,8 +103,8 @@ impl<T> Ord for Key<T> {
 impl<T> Drop for Key<T> where T: Sized {
     fn drop(&mut self) {
         unsafe {
-            ptr::drop_in_place(&mut self.0 as &mut T);
-            munlock(&mut self.0 as &mut T, mem::size_of::<T>());
+            ptr::drop_in_place(self.0);
+            munlock(self.0, mem::size_of::<T>());
         }
     }
 }
