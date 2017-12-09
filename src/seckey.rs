@@ -49,6 +49,7 @@ impl<T> SecKey<T> where T: Sized {
     /// assert_eq!([1, 2, 3], v);
     /// assert_eq!([1, 2, 3], *k.read());
     /// ```
+    #[inline]
     pub unsafe fn from_raw(t: *const T) -> Option<SecKey<T>> {
         Self::with(move |memptr| ptr::copy_nonoverlapping(t, memptr, 1))
     }
@@ -78,27 +79,12 @@ impl<T> SecKey<T> where T: Sized {
 }
 
 impl<T> SecKey<T> {
-    fn read_unlock(&self) {
-        let count = self.count.get();
-        self.count.set(count + 1);
-        if count == 0 {
-            unsafe { mprotect(self.ptr, Prot::ReadOnly) };
-        }
-    }
-
-    fn write_unlock(&self) {
-        let count = self.count.get();
-        self.count.set(count + 1);
-        if count == 0 {
-            unsafe { mprotect(self.ptr, Prot::ReadWrite) };
-        }
-    }
-
-    fn lock(&self) {
+    #[inline]
+    unsafe fn lock(&self) {
         let count = self.count.get();
         self.count.set(count - 1);
         if count <= 1 {
-            unsafe { mprotect(self.ptr, Prot::NoAccess) };
+            mprotect(self.ptr, Prot::NoAccess);
         }
     }
 
@@ -112,7 +98,12 @@ impl<T> SecKey<T> {
     /// ```
     #[inline]
     pub fn read(&self) -> SecReadGuard<T> {
-        self.read_unlock();
+        let count = self.count.get();
+        self.count.set(count + 1);
+        if count == 0 {
+            unsafe { mprotect(self.ptr, Prot::ReadOnly) };
+        }
+
         SecReadGuard(self)
     }
 
@@ -128,14 +119,22 @@ impl<T> SecKey<T> {
     /// ```
     #[inline]
     pub fn write(&mut self) -> SecWriteGuard<T> {
-        self.write_unlock();
+        let count = self.count.get();
+        self.count.set(count + 1);
+        if count == 0 {
+            unsafe { mprotect(self.ptr, Prot::ReadWrite) };
+        }
+
         SecWriteGuard(self)
     }
 }
 
 impl<T> fmt::Debug for SecKey<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "** sec key ({}) **", self.count.get())
+        f.debug_tuple("SecKey")
+            .field(&format_args!("{:p}", self.ptr))
+            .field(&self.count)
+            .finish()
     }
 }
 
@@ -168,7 +167,7 @@ impl<'a, T: 'a> Deref for SecReadGuard<'a, T> {
 
 impl<'a, T: 'a> Drop for SecReadGuard<'a, T> {
     fn drop(&mut self) {
-        self.0.lock();
+        unsafe { self.0.lock() }
     }
 }
 
@@ -191,6 +190,6 @@ impl<'a, T: 'a> DerefMut for SecWriteGuard<'a, T> {
 
 impl<'a, T: 'a> Drop for SecWriteGuard<'a, T> {
     fn drop(&mut self) {
-        self.0.lock();
+        unsafe { self.0.lock() }
     }
 }

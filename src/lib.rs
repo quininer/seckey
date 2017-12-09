@@ -3,10 +3,10 @@
 extern crate memsec;
 #[cfg(feature = "nodrop")] extern crate nodrop;
 
-mod key;
+mod tempkey;
 mod bytes;
 mod seckey;
 
-pub use key::*;
 pub use bytes::*;
+pub use tempkey::*;
 pub use seckey::*;
