@@ -1,4 +1,6 @@
 # seckey
+[![travis-ci](https://travis-ci.org/quininer/seckey.svg?branch=master)](https://travis-ci.org/quininer/seckey)
+[![appveyor](https://ci.appveyor.com/api/projects/status/fcldrw36r359us9i?svg=true)](https://ci.appveyor.com/project/quininer/seckey)
 [![crates](https://img.shields.io/crates/v/seckey.svg)](https://crates.io/crates/seckey)
 [![license](https://img.shields.io/github/license/quininer/seckey.svg)](https://github.com/quininer/seckey/blob/master/LICENSE)
 [![docs.rs](https://docs.rs/seckey/badge.svg)](https://docs.rs/seckey/)
