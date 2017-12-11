@@ -1,40 +1,35 @@
+#![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
+
+
 extern crate seckey;
 
 use seckey::TempKey;
 
 #[test]
-fn key_cmp_test() {
-    assert!(TempKey::from(1) > 0);
-    assert!(TempKey::from(0) < 1);
-    assert_eq!(TempKey::from(0), 0);
+fn tempkey_cmp_test() {
+    let mut one: i32 = 1;
+    let mut zero: i32 = 0;
+    let mut negative_one: i32 = -1;
 
-    assert!(TempKey::from(-1) > 0);
+    assert!(TempKey::new(&mut one) > 0);
+    assert!(TempKey::new(&mut zero) < 1);
+    assert_eq!(TempKey::new(&mut zero), 0);
+
+    assert!(TempKey::new(&mut negative_one) > 0);
         // ^- NOTE 4294967295 > 0
 }
 
 #[test]
-fn key_drop_test() {
-    static mut X: usize = 0;
-
-    struct Bar(usize);
-    impl Drop for Bar {
-        fn drop(&mut self) {
-            unsafe {
-                assert_ne!(self.0, 0);
-                X += self.0;
-            }
-        }
-    }
+fn tempkey_slice_test() {
+    let mut key = [42u8; 8];
 
     {
-        let bar = Bar(1);
-        drop(bar);
-    }
-    assert_eq!(unsafe { X }, 1);
+        let mut tempkey = TempKey::new(&mut key);
+        assert_eq!(tempkey, [42; 8]);
 
-    {
-        let bar = TempKey::from(Bar(1));
-        drop(bar);
+        tempkey[1] = 0;
+        assert_eq!(tempkey, [42, 0, 42, 42, 42, 42, 42, 42]);
     }
-    assert_eq!(unsafe { X }, 2);
+
+    assert_eq!(key, [0; 8]);
 }

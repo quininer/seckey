@@ -1,4 +1,4 @@
-use std::{ fmt, mem, ptr };
+use std::{ fmt, mem };
 use std::cmp::Ordering;
 use std::ops::{ Deref, DerefMut };
 use memsec::{ memeq, memcmp, mlock, munlock };
@@ -9,48 +9,37 @@ use memsec::{ memeq, memcmp, mlock, munlock };
 /// ```
 /// use seckey::TempKey;
 ///
-/// let key = TempKey::from([8u8; 8]);
+/// let key = TempKey::new([8u8; 8]);
 /// assert_eq!(key, [8u8; 8]);
 /// assert_ne!(key, [1u8; 8]);
-/// assert_eq!(key, TempKey::from([8u8; 8]));
+/// assert_eq!(key, TempKey::new([8u8; 8]));
 /// ```
-pub struct TempKey<T: Sized>(*mut T);
+pub struct TempKey<'a, T: Sized + Copy + 'a>(&'a mut T);
 
-impl<T> TempKey<T> {
-    pub fn from(t: T) -> TempKey<T> {
-        let box_ptr = Box::into_raw(Box::new(t));
-        unsafe { mlock(box_ptr, mem::size_of::<T>()) };
-        TempKey(box_ptr)
+impl<'a, T> TempKey<'a, T> where T: Sized + Copy + 'a {
+    pub fn new(t: &'a mut T) -> TempKey<'a, T> {
+        unsafe { mlock(t, mem::size_of::<T>()) };
+        TempKey(t)
     }
 }
 
-impl<T> Deref for TempKey<T> {
+
+impl<'a, T> Deref for TempKey<'a, T> where T: Sized + Copy + 'a {
     type Target = T;
 
     fn deref(&self) -> &T {
-        unsafe { &*self.0 }
+        &self.0
     }
 }
 
-impl<T> DerefMut for TempKey<T> {
+
+impl<'a, T> DerefMut for TempKey<'a, T> where T: Sized + Copy + 'a {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.0 }
+        &mut self.0
     }
 }
 
-impl<T> Default for TempKey<T> where T: Default {
-    fn default() -> TempKey<T> {
-        TempKey::from(T::default())
-    }
-}
-
-impl<T> Clone for TempKey<T> where T: Clone {
-    fn clone(&self) -> TempKey<T> {
-        unsafe { TempKey::from((*self.0).clone()) }
-    }
-}
-
-impl<T> fmt::Debug for TempKey<T> {
+impl<'a, T> fmt::Debug for TempKey<'a, T> where T: Sized + Copy + 'a {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_tuple("TempKey")
             .field(&format_args!("{:p}", self.0))
@@ -58,7 +47,7 @@ impl<T> fmt::Debug for TempKey<T> {
     }
 }
 
-impl<T: Sized> PartialEq<T> for TempKey<T> {
+impl<'a, T> PartialEq<T> for TempKey<'a, T> where T: Sized + Copy + 'a {
     /// Constant time eq.
     ///
     /// NOTE, it compare memory value.
@@ -67,7 +56,7 @@ impl<T: Sized> PartialEq<T> for TempKey<T> {
     }
 }
 
-impl<T: Sized> PartialEq<TempKey<T>> for TempKey<T> {
+impl<'a, 'b, T> PartialEq<TempKey<'b, T>> for TempKey<'a, T> where T: Sized + Copy + 'a {
     /// Constant time eq.
     ///
     /// NOTE, it compare memory value.
@@ -77,9 +66,9 @@ impl<T: Sized> PartialEq<TempKey<T>> for TempKey<T> {
     }
 }
 
-impl<T: Sized> Eq for TempKey<T> {}
+impl<'a, T> Eq for TempKey<'a, T> where T: Sized + Copy + 'a {}
 
-impl<T> PartialOrd<T> for TempKey<T> {
+impl<'a, T> PartialOrd<T> for TempKey<'a, T> where T: Sized + Copy + 'a {
     /// Constant time cmp.
     ///
     /// NOTE, it compare memory value.
@@ -90,24 +79,23 @@ impl<T> PartialOrd<T> for TempKey<T> {
     }
 }
 
-impl<T> PartialOrd<TempKey<T>> for TempKey<T> {
+impl<'a, 'b, T> PartialOrd<TempKey<'b, T>> for TempKey<'a, T> where T: Sized + Copy + 'a {
     #[inline]
     fn partial_cmp(&self, rhs: &TempKey<T>) -> Option<Ordering> {
         self.partial_cmp(rhs as &T)
     }
 }
 
-impl<T> Ord for TempKey<T> {
+impl<'a, T> Ord for TempKey<'a, T> where T: Sized + Copy + 'a {
     #[inline]
     fn cmp(&self, rhs: &TempKey<T>) -> Ordering {
         self.partial_cmp(rhs).unwrap()
     }
 }
 
-impl<T> Drop for TempKey<T> where T: Sized {
+impl<'a, T> Drop for TempKey<'a, T> where T: Sized + Copy {
     fn drop(&mut self) {
         unsafe {
-            ptr::drop_in_place(self.0);
             munlock(self.0, mem::size_of::<T>());
         }
     }
