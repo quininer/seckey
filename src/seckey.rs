@@ -15,17 +15,23 @@ pub struct SecKey<T> {
 }
 
 impl<T> Default for SecKey<T> where T: Default {
+    /// please use [`with_default`](#method.with_default) instead
     fn default() -> Self {
         SecKey::new(T::default())
             .unwrap_or_else(|_| panic!("memsec::malloc fail: {}", mem::size_of::<T>()))
     }
 }
 
-impl<T> SecKey<T> where T: Sized {
+impl<T> SecKey<T> {
     /// ```
-    /// use seckey::SecKey;
+    /// use seckey::{ zero, SecKey };
     ///
-    /// let k = SecKey::new([1, 2, 3]).unwrap();
+    /// let k = SecKey::new([1, 2, 3])
+    ///     .unwrap_or_else(|mut val| {
+    ///         // NOTE should zero it
+    ///         zero(&mut val);
+    ///         panic!()
+    ///     });
     /// assert_eq!([1, 2, 3], *k.read());
     /// ```
     pub fn new(mut t: T) -> Result<SecKey<T>, T> {
@@ -74,6 +80,23 @@ impl<T> SecKey<T> where T: Sized {
         Some(SecKey {
             ptr: memptr,
             count: Cell::new(0)
+        })
+    }
+}
+
+impl<T: Default> SecKey<T> {
+    /// ```
+    /// use seckey::SecKey;
+    ///
+    /// let k: SecKey<u32> = SecKey::with_default(|ptr| *ptr += 1).unwrap();
+    /// assert_eq!(1, *k.read());
+    /// ```
+    pub fn with_default<F>(f: F) -> Option<SecKey<T>>
+        where F: FnOnce(&mut T)
+    {
+        Self::with(|p| unsafe {
+            ptr::write(p, T::default());
+            f(&mut *p);
         })
     }
 }
