@@ -3,7 +3,6 @@
 extern crate seckey;
 #[cfg(unix)] extern crate nix;
 
-use std::slice;
 use seckey::SecKey;
 
 
@@ -11,6 +10,7 @@ use seckey::SecKey;
 #[should_panic]
 #[test]
 fn protect_seckey_test() {
+    use std::slice;
     use nix::sys::signal;
     extern fn sigsegv(_: i32) { panic!() }
     let sigaction = signal::SigAction::new(

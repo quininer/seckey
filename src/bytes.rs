@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use std::fmt;
 use std::cmp::{ Ordering, min };
 use std::iter::repeat;
@@ -15,6 +17,7 @@ use memsec::{ memeq, memcmp, mlock, munlock };
 /// assert_eq!(bytes, [8; 8]);
 /// ```
 #[derive(Default)]
+#[deprecated(since="0.7.2", note="deprecated Bytes")]
 pub struct Bytes(Vec<u8>);
 
 impl Bytes {
