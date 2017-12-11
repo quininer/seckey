@@ -9,10 +9,12 @@ use memsec::{ memeq, memcmp, mlock, munlock };
 /// ```
 /// use seckey::TempKey;
 ///
-/// let key = TempKey::new([8u8; 8]);
+/// let mut key = [8u8; 8];
+/// let key = TempKey::new(&mut key);
 /// assert_eq!(key, [8u8; 8]);
 /// assert_ne!(key, [1u8; 8]);
-/// assert_eq!(key, TempKey::new([8u8; 8]));
+/// let mut key2 = [8u8; 8];
+/// assert_eq!(key, TempKey::new(&mut key2));
 /// ```
 pub struct TempKey<'a, T: Sized + Copy + 'a>(&'a mut T);
 
@@ -28,14 +30,14 @@ impl<'a, T> Deref for TempKey<'a, T> where T: Sized + Copy + 'a {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &self.0
+        self.0
     }
 }
 
 
 impl<'a, T> DerefMut for TempKey<'a, T> where T: Sized + Copy + 'a {
     fn deref_mut(&mut self) -> &mut T {
-        &mut self.0
+        self.0
     }
 }
 
