@@ -1,7 +1,8 @@
-use std::{ fmt, mem };
-use std::cmp::Ordering;
-use std::ops::{ Deref, DerefMut };
-use memsec::{ memeq, memcmp, mlock, munlock };
+use core::{ fmt, mem };
+use core::cmp::Ordering;
+use core::ops::{ Deref, DerefMut };
+use memsec::{ memeq, memcmp };
+#[cfg(feature = "use_std")] use memsec::{ mlock, munlock };
 
 
 /// Temporary Key.
@@ -20,7 +21,9 @@ pub struct TempKey<'a, T: Sized + Copy + 'a>(&'a mut T);
 
 impl<'a, T> TempKey<'a, T> where T: Sized + Copy + 'a {
     pub fn new(t: &'a mut T) -> TempKey<'a, T> {
+        #[cfg(feature = "use_std")]
         unsafe { mlock(t, mem::size_of::<T>()) };
+
         TempKey(t)
     }
 }
@@ -97,8 +100,10 @@ impl<'a, T> Ord for TempKey<'a, T> where T: Sized + Copy + 'a {
 
 impl<'a, T> Drop for TempKey<'a, T> where T: Sized + Copy {
     fn drop(&mut self) {
-        unsafe {
-            munlock(self.0, mem::size_of::<T>());
-        }
+        #[cfg(feature = "use_std")]
+        unsafe { munlock(self.0, mem::size_of::<T>()) };
+
+        #[cfg(not(feature = "use_std"))]
+        ::zero(self.0);
     }
 }

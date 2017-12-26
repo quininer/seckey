@@ -1,35 +1,10 @@
 #![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
+#![cfg(feature = "use_std")]
 
 extern crate seckey;
-#[cfg(unix)] extern crate nix;
 
 use seckey::SecKey;
 
-
-#[cfg(all(unix, not(any(target_os = "macos", target_os = "ios"))))]
-#[should_panic]
-#[test]
-fn protect_seckey_test() {
-    use std::slice;
-    use nix::sys::signal;
-    extern fn sigsegv(_: i32) { panic!() }
-    let sigaction = signal::SigAction::new(
-        signal::SigHandler::Handler(sigsegv),
-        signal::SA_SIGINFO,
-        signal::SigSet::empty(),
-    );
-    unsafe { signal::sigaction(signal::SIGSEGV, &sigaction).ok() };
-
-    let mut secpass = SecKey::new([1; 8]).unwrap();
-
-    let mut wpass = secpass.write();
-    let bs_bytes = unsafe {
-        // unsafe get secpass ptr
-        slice::from_raw_parts_mut(wpass.as_mut_ptr(), wpass.len())
-    };
-    drop(wpass);
-    bs_bytes[0] = 0; // SIGSEGV !
-}
 
 #[test]
 fn seckey_read_then_read() {

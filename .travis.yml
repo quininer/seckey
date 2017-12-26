@@ -4,3 +4,7 @@ cache: cargo
 os:
     - linux
     - osx
+
+script:
+  - cargo test --no-default-features
+  - cargo test

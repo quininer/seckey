@@ -1,16 +1,20 @@
 //! Use [memsec](https://github.com/quininer/memsec) protected secret memory.
 
+#![cfg_attr(not(feature = "use_std"), no_std)]
+
+#[cfg(feature = "use_std")] extern crate core;
 extern crate memsec;
 
 mod tempkey;
-mod bytes;
-mod seckey;
+#[cfg(feature = "use_std")] mod bytes;
+#[cfg(feature = "use_std")] mod seckey;
 
-use std::mem;
+use core::mem;
 use memsec::memzero;
-pub use bytes::*;
+
 pub use tempkey::*;
-pub use seckey::*;
+#[cfg(feature = "use_std")] pub use bytes::*;
+#[cfg(feature = "use_std")] pub use seckey::*;
 
 
 /// Zero a value

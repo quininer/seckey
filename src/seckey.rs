@@ -22,6 +22,12 @@ impl<T> Default for SecKey<T> where T: Default {
     }
 }
 
+impl<T: Copy> SecKey<T> {
+    pub fn from_ref(t: &T) -> Option<SecKey<T>> {
+        unsafe { Self::from_raw(t) }
+    }
+}
+
 impl<T> SecKey<T> {
     /// ```
     /// use seckey::{ zero, SecKey };
