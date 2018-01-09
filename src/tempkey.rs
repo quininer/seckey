@@ -1,7 +1,7 @@
 use core::{ fmt, mem };
 use core::cmp::Ordering;
 use core::ops::{ Deref, DerefMut };
-use memsec::{ memeq, memcmp };
+use memsec::{ memeq, memcmp, memzero };
 #[cfg(feature = "use_std")] use memsec::{ mlock, munlock };
 
 
@@ -120,7 +120,6 @@ impl<'a, T> Drop for TempKey<'a, T> where T: Sized {
         #[cfg(feature = "use_std")]
         unsafe { munlock(self.0, mem::size_of::<T>()) };
 
-        #[cfg(not(feature = "use_std"))]
         unsafe { memzero(self.0, mem::size_of::<T>()) };
     }
 }
