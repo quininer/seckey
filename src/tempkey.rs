@@ -17,7 +17,24 @@ use memsec::{ memeq, memcmp };
 /// let mut key2 = [8u8; 8];
 /// assert_eq!(key, TempKey::new(&mut key2));
 /// ```
-pub struct TempKey<'a, T: Sized + Copy + 'a>(&'a mut T);
+pub struct TempKey<'a, T: Sized + 'a>(&'a mut T);
+
+pub struct NeedsDrop;
+
+// TODO use TryFrom
+// :( https://github.com/rust-lang/rust/issues/33417#issuecomment-347046063
+impl<'a, T> TempKey<'a, T> where T: Sized + 'a {
+    pub fn try_from(t: &'a mut T) -> Result<TempKey<'a, T>, NeedsDrop> {
+        if mem::needs_drop::<T>() {
+            Err(NeedsDrop)
+        } else {
+            #[cfg(feature = "use_std")]
+            unsafe { mlock(t, mem::size_of::<T>()) };
+
+            Ok(TempKey(t))
+        }
+    }
+}
 
 impl<'a, T> TempKey<'a, T> where T: Sized + Copy + 'a {
     pub fn new(t: &'a mut T) -> TempKey<'a, T> {
@@ -29,7 +46,7 @@ impl<'a, T> TempKey<'a, T> where T: Sized + Copy + 'a {
 }
 
 
-impl<'a, T> Deref for TempKey<'a, T> where T: Sized + Copy + 'a {
+impl<'a, T> Deref for TempKey<'a, T> where T: Sized + 'a {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -38,13 +55,13 @@ impl<'a, T> Deref for TempKey<'a, T> where T: Sized + Copy + 'a {
 }
 
 
-impl<'a, T> DerefMut for TempKey<'a, T> where T: Sized + Copy + 'a {
+impl<'a, T> DerefMut for TempKey<'a, T> where T: Sized + 'a {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
 }
 
-impl<'a, T> fmt::Debug for TempKey<'a, T> where T: Sized + Copy + 'a {
+impl<'a, T> fmt::Debug for TempKey<'a, T> where T: Sized + 'a {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_tuple("TempKey")
             .field(&format_args!("{:p}", self.0))
@@ -52,7 +69,7 @@ impl<'a, T> fmt::Debug for TempKey<'a, T> where T: Sized + Copy + 'a {
     }
 }
 
-impl<'a, T> PartialEq<T> for TempKey<'a, T> where T: Sized + Copy + 'a {
+impl<'a, T> PartialEq<T> for TempKey<'a, T> where T: Sized + 'a {
     /// Constant time eq.
     ///
     /// NOTE, it compare memory value.
@@ -61,7 +78,7 @@ impl<'a, T> PartialEq<T> for TempKey<'a, T> where T: Sized + Copy + 'a {
     }
 }
 
-impl<'a, 'b, T> PartialEq<TempKey<'b, T>> for TempKey<'a, T> where T: Sized + Copy + 'a {
+impl<'a, 'b, T> PartialEq<TempKey<'b, T>> for TempKey<'a, T> where T: Sized + 'a {
     /// Constant time eq.
     ///
     /// NOTE, it compare memory value.
@@ -71,9 +88,9 @@ impl<'a, 'b, T> PartialEq<TempKey<'b, T>> for TempKey<'a, T> where T: Sized + Co
     }
 }
 
-impl<'a, T> Eq for TempKey<'a, T> where T: Sized + Copy + 'a {}
+impl<'a, T> Eq for TempKey<'a, T> where T: Sized + 'a {}
 
-impl<'a, T> PartialOrd<T> for TempKey<'a, T> where T: Sized + Copy + 'a {
+impl<'a, T> PartialOrd<T> for TempKey<'a, T> where T: Sized + 'a {
     /// Constant time cmp.
     ///
     /// NOTE, it compare memory value.
@@ -84,26 +101,26 @@ impl<'a, T> PartialOrd<T> for TempKey<'a, T> where T: Sized + Copy + 'a {
     }
 }
 
-impl<'a, 'b, T> PartialOrd<TempKey<'b, T>> for TempKey<'a, T> where T: Sized + Copy + 'a {
+impl<'a, 'b, T> PartialOrd<TempKey<'b, T>> for TempKey<'a, T> where T: Sized + 'a {
     #[inline]
     fn partial_cmp(&self, rhs: &TempKey<T>) -> Option<Ordering> {
         self.partial_cmp(rhs as &T)
     }
 }
 
-impl<'a, T> Ord for TempKey<'a, T> where T: Sized + Copy + 'a {
+impl<'a, T> Ord for TempKey<'a, T> where T: Sized + 'a {
     #[inline]
     fn cmp(&self, rhs: &TempKey<T>) -> Ordering {
         self.partial_cmp(rhs).unwrap()
     }
 }
 
-impl<'a, T> Drop for TempKey<'a, T> where T: Sized + Copy {
+impl<'a, T> Drop for TempKey<'a, T> where T: Sized {
     fn drop(&mut self) {
         #[cfg(feature = "use_std")]
         unsafe { munlock(self.0, mem::size_of::<T>()) };
 
         #[cfg(not(feature = "use_std"))]
-        ::zero(self.0);
+        unsafe { memzero(self.0, mem::size_of::<T>()) };
     }
 }

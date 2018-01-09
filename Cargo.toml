@@ -1,6 +1,6 @@
 [package]
 name = "seckey"
-version = "0.7.4"
+version = "0.7.5"
 authors = ["quininer kel <quininer@live.com>"]
 description = "Use `memsec` protected secret memory."
 repository = "https://github.com/quininer/seckey"
@@ -18,4 +18,5 @@ memsec = { version = "0.4", default-features = false }
 
 [features]
 default = [ "use_std" ]
+nightly = [ "memsec/nightly" ]
 use_std = [ "memsec/alloc" ]

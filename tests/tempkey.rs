@@ -33,3 +33,19 @@ fn tempkey_slice_test() {
 
     assert_eq!(key, [0; 8]);
 }
+
+#[test]
+fn tempkey_try_form_test() {
+    struct Bar(());
+    struct Bar2(());
+
+    impl Drop for Bar2 {
+        fn drop(&mut self) {}
+    }
+
+    let mut bar = Bar(());
+    let mut bar2 = Bar2(());
+
+    assert!(TempKey::try_from(&mut bar).is_ok());
+    assert!(TempKey::try_from(&mut bar2).is_err());
+}
