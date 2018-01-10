@@ -53,6 +53,21 @@ fn tempkey_slice_test() {
     assert_eq!(&key[1..7], [0; 6]);
     assert_eq!(key[0], 42);
     assert_eq!(key[7], 42);
+
+    // dyn size x2
+    let mut key = [[42u32; 3], [42u32; 3], [42u32; 3]];
+
+    {
+        let mut tempkey = TempKey::try_from_slice(&mut key[1..2]).unwrap();
+        assert_eq!(tempkey[0], &mut [42; 3][..]);
+
+        tempkey[0][1] = 24;
+        assert_eq!(tempkey[0][1], 24);
+    }
+
+    assert_eq!(key[0], [42; 3]);
+    assert_eq!(key[1], [0; 3]);
+    assert_eq!(key[2], [42; 3]);
 }
 
 #[test]

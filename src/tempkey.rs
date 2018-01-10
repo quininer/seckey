@@ -19,8 +19,9 @@ use memsec::{ memeq, memcmp };
 /// let mut key2 = [8u8; 8];
 /// assert_eq!(key, *TempKey::new(&mut key2));
 /// ```
-pub struct TempKey<'a, T: ?Sized + 'a>(&'a mut T);
+pub struct TempKey<'a, T: ?Sized + 'static>(&'a mut T);
 
+#[derive(Debug)]
 pub struct NeedsDrop;
 
 
@@ -48,7 +49,7 @@ impl<'a, T: Sized> TempKey<'a, T> {
     }
 }
 
-impl<'a, T: Sized + Copy> TempKey<'a, [T]> {
+impl<'a, T: ?Sized + Copy> TempKey<'a, [T]> {
     pub fn from_slice(t: &'a mut [T]) -> TempKey<'a, [T]> {
         #[cfg(feature = "use_std")]
         unsafe { mlock(t.as_mut_ptr() as *mut u8, mem::size_of_val(t)) };
