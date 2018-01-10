@@ -98,7 +98,7 @@ impl<'a, T: ?Sized> fmt::Debug for TempKey<'a, T> {
 impl<'a, T: ?Sized> PartialEq<T> for TempKey<'a, T> {
     /// Constant time eq.
     ///
-    /// NOTE, it compare memory value.
+    /// NOTE: it compare memory value.
     fn eq(&self, rhs: &T) -> bool {
         let len1 = mem::size_of_val(self.0);
         let len2 = mem::size_of_val(rhs);
@@ -106,16 +106,13 @@ impl<'a, T: ?Sized> PartialEq<T> for TempKey<'a, T> {
         let r = unsafe { memeq(
             self.0 as *const T as *const u8,
             rhs as *const T as *const u8,
-            len1
+            cmp::min(len1, len2)
         ) };
         len1 == len2 && r
     }
 }
 
 impl<'a, 'b, T: Sized> PartialEq<TempKey<'b, T>> for TempKey<'a, T> {
-    /// Constant time eq.
-    ///
-    /// NOTE, it compare memory value.
     fn eq(&self, rhs: &TempKey<T>) -> bool {
         self.eq(rhs.deref())
     }
@@ -126,7 +123,7 @@ impl<'a, T: Sized> Eq for TempKey<'a, T> {}
 impl<'a, T: ?Sized> PartialOrd<T> for TempKey<'a, T> {
     /// Constant time cmp.
     ///
-    /// NOTE, it compare memory value.
+    /// NOTE: it compare memory value.
     fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
         let len1 = mem::size_of_val(self.0);
         let len2 = mem::size_of_val(rhs);
