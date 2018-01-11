@@ -4,7 +4,7 @@ use std::cell::Cell;
 use memsec::{ memzero, malloc, free, mprotect, Prot };
 
 
-/// Secure Key.
+/// Secure Key
 ///
 /// The use [memsec/malloc](../../memsec/fn.malloc.html) protection secret bytes.
 ///
@@ -117,7 +117,7 @@ impl<T> SecKey<T> {
         }
     }
 
-    /// Borrow Read.
+    /// Borrow Read
     ///
     /// ```
     /// use seckey::SecKey;
@@ -136,7 +136,7 @@ impl<T> SecKey<T> {
         SecReadGuard(self)
     }
 
-    /// Borrow Write.
+    /// Borrow Write
     ///
     /// ```
     /// # use seckey::SecKey;
@@ -184,7 +184,7 @@ impl<T> Drop for SecKey<T> {
 }
 
 
-/// Read Guard.
+/// Read Guard
 pub struct SecReadGuard<'a, T: 'a>(&'a SecKey<T>);
 
 impl<'a, T: 'a> Deref for SecReadGuard<'a, T> {
@@ -201,7 +201,7 @@ impl<'a, T: 'a> Drop for SecReadGuard<'a, T> {
 }
 
 
-/// Write Guard.
+/// Write Guard
 pub struct SecWriteGuard<'a, T: 'a>(&'a mut SecKey<T>);
 
 impl<'a, T: 'a> Deref for SecWriteGuard<'a, T> {

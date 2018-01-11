@@ -6,7 +6,7 @@ use memsec::{ memeq, memcmp };
 #[cfg(feature = "use_std")] use memsec::{ mlock, munlock };
 
 
-/// Temporary Key.
+/// Temporary Key
 ///
 /// ```
 /// use seckey::TempKey;
@@ -17,8 +17,14 @@ use memsec::{ memeq, memcmp };
 /// assert_ne!(key, [1u8; 8]);
 ///
 /// let mut key2 = [8u8; 8];
-/// assert_eq!(key, *TempKey::new(&mut key2));
+/// assert_eq!(key, TempKey::new(&mut key2));
 /// ```
+///
+/// # Note
+///
+/// * It will zero the value when `Drop`.
+/// * It will refuse to accept if `T` is reference or pointer, to avoid causing null pointer.
+/// * It is a reference, to avoid it from being affected by stack copy (return value).
 pub struct TempKey<'a, T: ?Sized + 'static>(&'a mut T);
 
 #[derive(Debug)]
@@ -96,9 +102,9 @@ impl<'a, T: ?Sized> fmt::Debug for TempKey<'a, T> {
 }
 
 impl<'a, T: ?Sized> PartialEq<T> for TempKey<'a, T> {
-    /// Constant time eq.
+    /// Constant time eq
     ///
-    /// NOTE: it compare memory value.
+    /// **NOTE**: it compare memory value.
     fn eq(&self, rhs: &T) -> bool {
         let len1 = mem::size_of_val(self.0);
         let len2 = mem::size_of_val(rhs);
@@ -121,9 +127,9 @@ impl<'a, 'b, T: Sized> PartialEq<TempKey<'b, T>> for TempKey<'a, T> {
 impl<'a, T: Sized> Eq for TempKey<'a, T> {}
 
 impl<'a, T: ?Sized> PartialOrd<T> for TempKey<'a, T> {
-    /// Constant time cmp.
+    /// Constant time cmp
     ///
-    /// NOTE: it compare memory value.
+    /// **NOTE**: it compare memory value.
     fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
         let len1 = mem::size_of_val(self.0);
         let len2 = mem::size_of_val(rhs);
@@ -134,8 +140,9 @@ impl<'a, T: ?Sized> PartialOrd<T> for TempKey<'a, T> {
             cmp::min(len1, len2))
         };
 
+        let r = len1.cmp(&len2);
         Some(match order.cmp(&0) {
-            Ordering::Equal => len1.cmp(&len2),
+            Ordering::Equal => r,
             order => order
         })
     }
