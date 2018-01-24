@@ -71,7 +71,7 @@ fn tempkey_slice_test() {
 }
 
 #[test]
-fn tempkey_try_form_test() {
+fn tempkey_try_from_test() {
     struct Bar<T>(T);
     struct Bar2<T>(T);
 
@@ -90,4 +90,24 @@ fn tempkey_try_form_test() {
     assert!(TempKey::try_from(&mut bar3).is_err());
     assert!(TempKey::try_from_slice(&mut bar_slice[..]).is_ok());
     assert!(TempKey::try_from_slice(&mut bar_slice2[..]).is_err());
+}
+
+#[test]
+fn tempkey_from_str() {
+    let mut bar = String::from("bar");
+    {
+        let bar = TempKey::from_str(&mut bar);
+        assert_eq!(&*bar, "bar");
+    }
+    assert_eq!(bar, String::from_utf8(vec![0x00, 0x00, 0x00]).unwrap());
+
+
+    let mut bar2 = String::from("barbarbar");
+    {
+        let bar2 = TempKey::from_str(&mut bar2[3..][..3]);
+        assert_eq!(&*bar2, "bar");
+    }
+    assert!(bar2.starts_with("bar"));
+    assert!(bar2.ends_with("bar"));
+    assert_eq!(&bar2[3..][..3], String::from_utf8(vec![0x00, 0x00, 0x00]).unwrap());
 }

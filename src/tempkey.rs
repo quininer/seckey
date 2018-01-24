@@ -77,6 +77,15 @@ impl<'a, T: Sized> TempKey<'a, [T]> {
     }
 }
 
+impl<'a> TempKey<'a, str> {
+    pub fn from_str(t: &'a mut str) -> TempKey<'a, str> {
+        #[cfg(feature = "use_std")]
+        unsafe { mlock(t.as_ptr() as *mut u8, mem::size_of_val(t)) };
+
+        TempKey(t)
+    }
+}
+
 
 impl<'a, T: ?Sized> Deref for TempKey<'a, T> {
     type Target = T;
