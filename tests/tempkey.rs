@@ -58,7 +58,7 @@ fn tempkey_slice_test() {
     let mut key = [[42u32; 3], [42u32; 3], [42u32; 3]];
 
     {
-        let mut tempkey = TempKey::try_from_slice(&mut key[1..2]).unwrap();
+        let mut tempkey = TempKey::from_slice(&mut key[1..2]);
         assert_eq!(tempkey[0], &mut [42; 3][..]);
 
         tempkey[0][1] = 24;
@@ -68,28 +68,6 @@ fn tempkey_slice_test() {
     assert_eq!(key[0], [42; 3]);
     assert_eq!(key[1], [0; 3]);
     assert_eq!(key[2], [42; 3]);
-}
-
-#[test]
-fn tempkey_try_from_test() {
-    struct Bar<T>(T);
-    struct Bar2<T>(T);
-
-    impl<T> Drop for Bar2<T> {
-        fn drop(&mut self) {}
-    }
-
-    let mut bar = Bar(());
-    let mut bar2 = Bar2(());
-    let mut bar3 = Bar(Bar2(()));
-    let mut bar_slice = [Bar(()), Bar(()), Bar(())];
-    let mut bar_slice2 = [Bar2(()), Bar2(()), Bar2(())];
-
-    assert!(TempKey::try_from(&mut bar).is_ok());
-    assert!(TempKey::try_from(&mut bar2).is_err());
-    assert!(TempKey::try_from(&mut bar3).is_err());
-    assert!(TempKey::try_from_slice(&mut bar_slice[..]).is_ok());
-    assert!(TempKey::try_from_slice(&mut bar_slice2[..]).is_err());
 }
 
 #[test]

@@ -31,58 +31,52 @@ pub struct TempKey<'a, T: ?Sized + 'static>(&'a mut T);
 pub struct NeedsDrop;
 
 
-impl<'a, T: ?Sized + Copy> TempKey<'a, T> {
-    pub fn new(t: &'a mut T) -> TempKey<'a, T> {
+impl<'a, T: ?Sized> TempKey<'a, T> {
+    pub unsafe fn unsafe_from(t: &'a mut T) -> TempKey<'a, T> {
         #[cfg(feature = "use_std")]
-        unsafe { mlock(t as *mut T as *mut u8, mem::size_of_val(t)) };
+        mlock(t as *mut T as *mut u8, mem::size_of_val(t));
 
         TempKey(t)
     }
 }
 
-// TODO use TryFrom
-// :( https://github.com/rust-lang/rust/issues/33417#issuecomment-347046063
+impl<'a, T: ?Sized + Copy> TempKey<'a, T> {
+    pub fn new(t: &'a mut T) -> TempKey<'a, T> {
+        unsafe { TempKey::unsafe_from(t) }
+    }
+}
+
 impl<'a, T: Sized> TempKey<'a, T> {
+    #[deprecated(since="0.7.10", note="unsafe")]
     pub fn try_from(t: &'a mut T) -> Result<TempKey<'a, T>, NeedsDrop> {
         if mem::needs_drop::<T>() {
             Err(NeedsDrop)
         } else {
-            #[cfg(feature = "use_std")]
-            unsafe { mlock(t, mem::size_of_val(t)) };
-
-            Ok(TempKey(t))
+            Ok(unsafe { TempKey::unsafe_from(t) })
         }
     }
 }
 
 impl<'a, T: ?Sized + Copy> TempKey<'a, [T]> {
     pub fn from_slice(t: &'a mut [T]) -> TempKey<'a, [T]> {
-        #[cfg(feature = "use_std")]
-        unsafe { mlock(t.as_mut_ptr() as *mut u8, mem::size_of_val(t)) };
-
-        TempKey(t)
+        unsafe { TempKey::unsafe_from(t) }
     }
 }
 
 impl<'a, T: Sized> TempKey<'a, [T]> {
+    #[deprecated(since="0.7.10", note="unsafe")]
     pub fn try_from_slice(t: &'a mut [T]) -> Result<TempKey<'a, [T]>, NeedsDrop> {
         if mem::needs_drop::<T>() {
             Err(NeedsDrop)
         } else {
-            #[cfg(feature = "use_std")]
-            unsafe { mlock(t.as_mut_ptr() as *mut u8, mem::size_of_val(t)) };
-
-            Ok(TempKey(t))
+            Ok(unsafe { TempKey::unsafe_from(t) })
         }
     }
 }
 
 impl<'a> TempKey<'a, str> {
     pub fn from_str(t: &'a mut str) -> TempKey<'a, str> {
-        #[cfg(feature = "use_std")]
-        unsafe { mlock(t.as_ptr() as *mut u8, mem::size_of_val(t)) };
-
-        TempKey(t)
+        unsafe { TempKey::unsafe_from(t) }
     }
 }
 
