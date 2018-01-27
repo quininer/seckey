@@ -48,7 +48,7 @@ fn seckey_drop_test() {
 
     {
         let bar = Bar(3);
-        let bar3 = unsafe { SecKey::from_raw(&bar).unwrap() };
+        let bar3 = unsafe { SecKey::from_ptr(&bar).unwrap() };
         drop(bar);
         drop(bar3);
     }

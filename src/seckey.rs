@@ -14,20 +14,6 @@ pub struct SecKey<T> {
     count: Cell<usize>
 }
 
-impl<T> Default for SecKey<T> where T: Default {
-    /// please use [`with_default`](#method.with_default) instead
-    fn default() -> Self {
-        SecKey::new(T::default())
-            .unwrap_or_else(|_| panic!("memsec::malloc fail: {}", mem::size_of::<T>()))
-    }
-}
-
-impl<T: Copy> SecKey<T> {
-    pub fn from_ref(t: &T) -> Option<SecKey<T>> {
-        unsafe { Self::from_raw(t) }
-    }
-}
-
 impl<T> SecKey<T> {
     /// ```
     /// use seckey::{ zero, SecKey };
@@ -42,7 +28,7 @@ impl<T> SecKey<T> {
     /// ```
     pub fn new(mut t: T) -> Result<SecKey<T>, T> {
         unsafe {
-            match Self::from_raw(&t) {
+            match Self::from_ptr(&t) {
                 Some(output) => {
                     memzero(&mut t, mem::size_of::<T>());
                     mem::forget(t);
@@ -57,12 +43,12 @@ impl<T> SecKey<T> {
     /// use seckey::SecKey;
     ///
     /// let mut v = [1, 2, 3];
-    /// let k = unsafe { SecKey::from_raw(&v).unwrap() };
+    /// let k = unsafe { SecKey::from_ptr(&v).unwrap() };
     /// assert_eq!([1, 2, 3], v);
     /// assert_eq!([1, 2, 3], *k.read());
     /// ```
     #[inline]
-    pub unsafe fn from_raw(t: *const T) -> Option<SecKey<T>> {
+    pub unsafe fn from_ptr(t: *const T) -> Option<SecKey<T>> {
         Self::with(move |memptr| ptr::copy_nonoverlapping(t, memptr, 1))
     }
 
@@ -87,6 +73,12 @@ impl<T> SecKey<T> {
             ptr: memptr,
             count: Cell::new(0)
         })
+    }
+}
+
+impl<T: Copy> SecKey<T> {
+    pub fn from_ref(t: &T) -> Option<SecKey<T>> {
+        unsafe { Self::from_ptr(t) }
     }
 }
 

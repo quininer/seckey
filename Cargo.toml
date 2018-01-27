@@ -1,6 +1,6 @@
 [package]
 name = "seckey"
-version = "0.7.10"
+version = "0.8.0"
 authors = ["quininer kel <quininer@live.com>"]
 description = "Use `memsec` protected secret memory."
 repository = "https://github.com/quininer/seckey"
