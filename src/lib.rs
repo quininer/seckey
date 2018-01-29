@@ -1,9 +1,8 @@
 //! Use [memsec](https://github.com/quininer/memsec) protected secret memory.
 
-#![cfg_attr(not(feature = "use_std"), no_std)]
+#![no_std]
 #![cfg_attr(feature = "nightly", feature(i128_type))]
 
-#[cfg(feature = "use_std")] extern crate core;
 extern crate memsec;
 
 mod tempkey;
@@ -57,7 +56,9 @@ mod zerosafe {
 
     impl_zerosafe!{ Type:
         usize, u8, u16, u32, u64,
-        isize, i8, i16, i32, i64
+        isize, i8, i16, i32, i64,
+
+        char, str
     }
 
     #[cfg(feature = "nightly")]
@@ -75,6 +76,5 @@ mod zerosafe {
         128, 256, 384, 512, 1024, 2048
     }
 
-    unsafe impl ZeroSafe for str {}
     unsafe impl<T: ZeroSafe> ZeroSafe for [T] {}
 }

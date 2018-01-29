@@ -1,6 +1,6 @@
-use std::{ fmt, mem, ptr };
-use std::ops::{ Deref, DerefMut };
-use std::cell::Cell;
+use core::{ fmt, mem, ptr };
+use core::ops::{ Deref, DerefMut };
+use core::cell::Cell;
 use memsec::{ memzero, malloc, free, mprotect, Prot };
 
 
