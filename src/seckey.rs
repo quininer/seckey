@@ -1,4 +1,5 @@
-use core::{ fmt, mem, ptr };
+use core::{ fmt, mem };
+use core::ptr::{ self, NonNull };
 use core::ops::{ Deref, DerefMut };
 use core::cell::Cell;
 use memsec::{ memzero, malloc, free, mprotect, Prot };
@@ -10,7 +11,7 @@ use memsec::{ memzero, malloc, free, mprotect, Prot };
 ///
 /// More docs see [Secure memory · libsodium](https://download.libsodium.org/doc/helpers/memory_management.html).
 pub struct SecKey<T> {
-    ptr: *mut T,
+    ptr: NonNull<T>,
     count: Cell<usize>
 }
 
@@ -30,7 +31,7 @@ impl<T> SecKey<T> {
         unsafe {
             match Self::from_ptr(&t) {
                 Some(output) => {
-                    memzero(&mut t, mem::size_of::<T>());
+                    memzero(&mut t as *mut T as *mut u8, mem::size_of::<T>());
                     mem::forget(t);
                     Ok(output)
                 },
@@ -55,22 +56,22 @@ impl<T> SecKey<T> {
     /// ```
     /// use seckey::SecKey;
     ///
-    /// let k: SecKey<u32> = SecKey::with(|ptr| unsafe { *ptr = 1 }).unwrap();
+    /// let k: SecKey<u32> = unsafe { SecKey::with(|ptr| *ptr = 1).unwrap() };
     /// assert_eq!(1, *k.read());
     /// ```
-    pub fn with<F>(f: F) -> Option<SecKey<T>>
+    pub unsafe fn with<F>(f: F) -> Option<SecKey<T>>
         where F: FnOnce(*mut T)
     {
-        let memptr: *mut T = match unsafe { malloc(mem::size_of::<T>()) } {
-            Some(memptr) => memptr,
+        let memptr = match malloc(mem::size_of::<T>()) {
+            Some(memptr) => memptr as *mut T,
             None => return None
         };
 
         f(memptr);
-        unsafe { mprotect(memptr, Prot::NoAccess) };
+        mprotect(memptr as *mut u8, Prot::NoAccess);
 
         Some(SecKey {
-            ptr: memptr,
+            ptr: NonNull::new_unchecked(memptr),
             count: Cell::new(0)
         })
     }
@@ -92,10 +93,12 @@ impl<T: Default> SecKey<T> {
     pub fn with_default<F>(f: F) -> Option<SecKey<T>>
         where F: FnOnce(&mut T)
     {
-        Self::with(|p| unsafe {
-            ptr::write(p, T::default());
-            f(&mut *p);
-        })
+        unsafe {
+            Self::with(|p| {
+                ptr::write(p, T::default());
+                f(&mut *p);
+            })
+        }
     }
 }
 
@@ -105,7 +108,7 @@ impl<T> SecKey<T> {
         let count = self.count.get();
         self.count.set(count - 1);
         if count <= 1 {
-            mprotect(self.ptr, Prot::NoAccess);
+            mprotect(self.ptr.as_ptr() as *mut u8, Prot::NoAccess);
         }
     }
 
@@ -122,7 +125,7 @@ impl<T> SecKey<T> {
         let count = self.count.get();
         self.count.set(count + 1);
         if count == 0 {
-            unsafe { mprotect(self.ptr, Prot::ReadOnly) };
+            unsafe { mprotect(self.ptr.as_ptr() as *mut u8, Prot::ReadOnly) };
         }
 
         SecReadGuard(self)
@@ -143,7 +146,7 @@ impl<T> SecKey<T> {
         let count = self.count.get();
         self.count.set(count + 1);
         if count == 0 {
-            unsafe { mprotect(self.ptr, Prot::ReadWrite) };
+            unsafe { mprotect(self.ptr.as_ptr() as *mut u8, Prot::ReadWrite) };
         }
 
         SecWriteGuard(self)
@@ -168,9 +171,9 @@ impl<T> fmt::Pointer for SecKey<T> {
 impl<T> Drop for SecKey<T> {
     fn drop(&mut self) {
         unsafe {
-            mprotect(self.ptr, Prot::ReadWrite);
-            ptr::drop_in_place(self.ptr);
-            free(self.ptr);
+            mprotect(self.ptr.as_ptr() as *mut u8, Prot::ReadWrite);
+            ptr::drop_in_place(self.ptr.as_ptr());
+            free(self.ptr.as_ptr() as *mut u8);
         }
     }
 }
@@ -182,7 +185,7 @@ pub struct SecReadGuard<'a, T: 'a>(&'a SecKey<T>);
 impl<'a, T: 'a> Deref for SecReadGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { &*self.0.ptr }
+        unsafe { self.0.ptr.as_ref() }
     }
 }
 
@@ -199,13 +202,13 @@ pub struct SecWriteGuard<'a, T: 'a>(&'a mut SecKey<T>);
 impl<'a, T: 'a> Deref for SecWriteGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { &*self.0.ptr }
+        unsafe { self.0.ptr.as_ref() }
     }
 }
 
 impl<'a, T: 'a> DerefMut for SecWriteGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.0.ptr }
+        unsafe { self.0.ptr.as_mut() }
     }
 }
 

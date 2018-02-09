@@ -1,6 +1,6 @@
 [package]
 name = "seckey"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["quininer kel <quininer@live.com>"]
 description = "Use `memsec` protected secret memory."
 repository = "https://github.com/quininer/seckey"
@@ -14,9 +14,12 @@ travis-ci = { repository = "quininer/seckey" }
 appveyor = { repository = "quininer/seckey" }
 
 [dependencies]
-memsec = { version = "0.4", default-features = false }
+memsec = { version = "0.5", default-features = false }
 
 [features]
 default = [ "use_std" ]
 nightly = [ "memsec/nightly" ]
 use_std = [ "memsec/alloc" ]
+
+[patch.crates-io]
+memsec = { path = "../memsec" }
