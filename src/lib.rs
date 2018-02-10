@@ -5,6 +5,7 @@
 
 extern crate memsec;
 
+mod cmpkey;
 mod tempkey;
 #[cfg(feature = "use_std")] mod seckey;
 
@@ -12,6 +13,7 @@ use core::mem;
 use memsec::memzero;
 
 pub use zerosafe::ZeroSafe;
+pub use cmpkey::CmpKey;
 pub use tempkey::*;
 #[cfg(feature = "use_std")] pub use seckey::*;
 

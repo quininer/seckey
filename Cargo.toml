@@ -19,7 +19,4 @@ memsec = { version = "0.5", default-features = false }
 [features]
 default = [ "use_std" ]
 nightly = [ "memsec/nightly" ]
-use_std = [ "memsec/alloc" ]
-
-[patch.crates-io]
-memsec = { path = "../memsec" }
+use_std = [ "memsec/alloc", "memsec/use_os" ]

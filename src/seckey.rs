@@ -62,16 +62,13 @@ impl<T> SecKey<T> {
     pub unsafe fn with<F>(f: F) -> Option<SecKey<T>>
         where F: FnOnce(*mut T)
     {
-        let memptr = match malloc(mem::size_of::<T>()) {
-            Some(memptr) => memptr as *mut T,
-            None => return None
-        };
+        let memptr = malloc()?;
 
-        f(memptr);
-        mprotect(memptr as *mut u8, Prot::NoAccess);
+        f(memptr.as_ptr());
+        mprotect(memptr, Prot::NoAccess);
 
         Some(SecKey {
-            ptr: NonNull::new_unchecked(memptr),
+            ptr: memptr,
             count: Cell::new(0)
         })
     }
@@ -108,7 +105,7 @@ impl<T> SecKey<T> {
         let count = self.count.get();
         self.count.set(count - 1);
         if count <= 1 {
-            mprotect(self.ptr.as_ptr() as *mut u8, Prot::NoAccess);
+            mprotect(self.ptr, Prot::NoAccess);
         }
     }
 
@@ -125,7 +122,7 @@ impl<T> SecKey<T> {
         let count = self.count.get();
         self.count.set(count + 1);
         if count == 0 {
-            unsafe { mprotect(self.ptr.as_ptr() as *mut u8, Prot::ReadOnly) };
+            unsafe { mprotect(self.ptr, Prot::ReadOnly) };
         }
 
         SecReadGuard(self)
@@ -146,7 +143,7 @@ impl<T> SecKey<T> {
         let count = self.count.get();
         self.count.set(count + 1);
         if count == 0 {
-            unsafe { mprotect(self.ptr.as_ptr() as *mut u8, Prot::ReadWrite) };
+            unsafe { mprotect(self.ptr, Prot::ReadWrite) };
         }
 
         SecWriteGuard(self)
@@ -171,9 +168,9 @@ impl<T> fmt::Pointer for SecKey<T> {
 impl<T> Drop for SecKey<T> {
     fn drop(&mut self) {
         unsafe {
-            mprotect(self.ptr.as_ptr() as *mut u8, Prot::ReadWrite);
+            mprotect(self.ptr, Prot::ReadWrite);
             ptr::drop_in_place(self.ptr.as_ptr());
-            free(self.ptr.as_ptr() as *mut u8);
+            free(self.ptr);
         }
     }
 }
