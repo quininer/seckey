@@ -8,15 +8,15 @@ use memsec::{ memeq, memcmp };
 /// # Note
 ///
 /// it compare memory value.
+#[repr(transparent)]
 pub struct CmpKey<T: ?Sized + 'static>(pub T);
 
 
 impl<T: ?Sized> CmpKey<T> {
     pub fn from(t: &T) -> &CmpKey<T> {
-        unsafe { mem::transmute(t) }
+        unsafe { &*(t as *const T as *const CmpKey<T>) }
     }
 }
-
 
 impl<T: ?Sized> fmt::Debug for CmpKey<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -25,7 +25,6 @@ impl<T: ?Sized> fmt::Debug for CmpKey<T> {
             .finish()
     }
 }
-
 
 impl<T: ?Sized> PartialEq<T> for CmpKey<T> {
     fn eq(&self, rhs: &T) -> bool {

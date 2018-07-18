@@ -1,7 +1,6 @@
 //! Use [memsec](https://github.com/quininer/memsec) protected secret memory.
 
 #![no_std]
-#![cfg_attr(feature = "nightly", feature(i128_type))]
 
 extern crate memsec;
 
@@ -46,7 +45,7 @@ mod zerosafe {
         };
         ( Generic : $( $t:ty ),* ) => {
             $(
-                unsafe impl<T: ?Sized> ZeroSafe for $t {}
+                unsafe impl<T> ZeroSafe for $t {}
             )*
         };
         ( Array : $( $n:expr ),* ) => {
@@ -57,16 +56,13 @@ mod zerosafe {
     }
 
     impl_zerosafe!{ Type:
-        usize, u8, u16, u32, u64,
-        isize, i8, i16, i32, i64,
+        usize, u8, u16, u32, u64, u128,
+        isize, i8, i16, i32, i64, i128,
 
         char, str
     }
 
-    #[cfg(feature = "nightly")]
-    impl_zerosafe!{ Type: u128, i128 }
-
-    impl_zerosafe!{ Generic: *const T, *mut T }
+    impl_zerosafe!{ Generic: *const T, *mut T, [T] }
 
     impl_zerosafe!{ Array:
          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
@@ -77,6 +73,4 @@ mod zerosafe {
 
         128, 256, 384, 512, 1024, 2048
     }
-
-    unsafe impl<T: ZeroSafe> ZeroSafe for [T] {}
 }

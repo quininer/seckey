@@ -15,6 +15,10 @@ fn cmpkey_cmp_test() {
 
     assert!(CmpKey(-1) > 0);
         // ^- NOTE 4294967295 > 0
+
+    let a = [2; 3];
+    let b = [1; 4];
+    assert_eq!(&a[..] > &b[..], CmpKey::from(&a[..]) > CmpKey::from(&b[..]));
 }
 
 #[test]
