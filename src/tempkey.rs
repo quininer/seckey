@@ -1,4 +1,4 @@
-use core::{ fmt, mem, ptr };
+use core::{ fmt, mem };
 use core::ops::{ Deref, DerefMut };
 #[cfg(not(feature = "use_std"))] use memsec::memzero;
 #[cfg(feature = "use_std")] use memsec::{ mlock, munlock };

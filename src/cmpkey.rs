@@ -8,7 +8,7 @@ use memsec::{ memeq, memcmp };
 /// # Note
 ///
 /// it compare memory value.
-#[repr(transparent)]
+#[cfg_attr(feature = "nightly", repr(transparent))]
 pub struct CmpKey<T: ?Sized + 'static>(pub T);
 
 
