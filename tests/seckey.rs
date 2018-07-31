@@ -61,3 +61,23 @@ fn seckey_drop_test() {
     }
     assert_eq!(unsafe { X }, 4);
 }
+
+#[test]
+fn test_seckey_ref() {
+    pub struct Bar(u32);
+
+    impl Drop for Bar {
+        fn drop(&mut self) {
+            assert_eq!(self.0, 0x42);
+            self.0 += 1;
+        }
+    }
+
+    let mut bar = Bar(0x42);
+
+    {
+        let _sk = SecKey::new(&mut bar).ok().unwrap();
+    }
+
+    assert_eq!(bar.0, 0x42);
+}

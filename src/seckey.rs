@@ -9,6 +9,8 @@ use memsec::{ memzero, malloc, free, mprotect, Prot };
 ///
 /// The use [memsec/malloc](../../memsec/fn.malloc.html) protection secret bytes.
 ///
+/// Note that this does not protect data outside of the secure heap.
+///
 /// More docs see [Secure memory · libsodium](https://download.libsodium.org/doc/helpers/memory_management.html).
 pub struct SecKey<T> {
     ptr: NonNull<T>,
@@ -17,12 +19,12 @@ pub struct SecKey<T> {
 
 impl<T> SecKey<T> {
     /// ```
-    /// use seckey::{ zero, SecKey };
+    /// use seckey::{ free, SecKey };
     ///
     /// let k = SecKey::new([1, 2, 3])
     ///     .unwrap_or_else(|mut val| {
     ///         // NOTE should zero it
-    ///         zero(&mut val);
+    ///         free(val);
     ///         panic!()
     ///     });
     /// assert_eq!([1, 2, 3], *k.read());
