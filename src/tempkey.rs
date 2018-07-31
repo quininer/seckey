@@ -2,6 +2,7 @@ use core::{ fmt, mem, ptr };
 use core::ops::{ Deref, DerefMut };
 #[cfg(not(feature = "use_std"))] use memsec::memzero;
 #[cfg(feature = "use_std")] use memsec::{ mlock, munlock };
+use ::ZeroSafe;
 
 
 /// Temporary Key
@@ -22,13 +23,18 @@ use core::ops::{ Deref, DerefMut };
 pub struct TempKey<'a, T: ?Sized + 'static>(&'a mut T);
 
 
-impl<'a, T: ?Sized> From<&'a mut T> for TempKey<'a, T> {
-    fn from(t: &'a mut T) -> TempKey<'a, T> {
-        #[cfg(feature = "use_std")] unsafe {
-            mlock(t as *mut T as *mut u8, mem::size_of_val(t));
-        }
+impl<'a, T: ?Sized> TempKey<'a, T> {
+    pub unsafe fn unsafe_from(t: &'a mut T) -> TempKey<'a, T> {
+        #[cfg(feature = "use_std")]
+        mlock(t as *mut T as *mut u8, mem::size_of_val(t));
 
         TempKey(t)
+    }
+}
+
+impl<'a, T: ?Sized + ZeroSafe> From<&'a mut T> for TempKey<'a, T> {
+    fn from(t: &'a mut T) -> TempKey<'a, T> {
+        unsafe { TempKey::unsafe_from(t) }
     }
 }
 
@@ -59,8 +65,6 @@ impl<'a, T: ?Sized> Drop for TempKey<'a, T> {
         let size = mem::size_of_val(self.0);
 
         unsafe {
-            ptr::drop_in_place(&mut self.0);
-
             #[cfg(feature = "use_std")]
             munlock(self.0 as *mut T as *mut u8, size);
 
