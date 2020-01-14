@@ -2,7 +2,7 @@ use core::{ fmt, mem, str };
 use core::ptr::{ self, NonNull };
 use core::ops::{ Deref, DerefMut };
 use core::cell::Cell;
-use memsec::{ memzero, malloc, malloc_sized, free, mprotect, Prot };
+use memsec::{ memzero, memset, malloc, malloc_sized, free, mprotect, Prot };
 
 
 /// Secure Key
@@ -130,6 +130,23 @@ impl SecKey<[u8]> {
 
             // zero original source
             memzero(src.as_mut_ptr(), src.len());
+
+            Some(SecKey {
+                ptr: memptr,
+                count: Cell::new(0),
+            })
+        }
+    }
+
+    pub fn with_len(val: u8, len: usize) -> Option<SecKey<[u8]>> {
+        unsafe {
+            let mut memptr = malloc_sized(len)?;
+
+            // initialize
+            memset(memptr.as_mut().as_mut_ptr(), val, len);
+
+            // protect secret
+            mprotect(memptr, Prot::NoAccess);
 
             Some(SecKey {
                 ptr: memptr,
