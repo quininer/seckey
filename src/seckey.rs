@@ -17,6 +17,10 @@ pub struct SecKey<T: ?Sized> {
     count: Cell<usize>
 }
 
+// Safety: It is safe to make SecKey sendable because `ptr` is only used
+//         by us and it doesn't have any thread specific behavior.
+unsafe impl<T: Send + ?Sized> Send for SecKey<T> {}
+
 impl<T> SecKey<T> {
     /// ```
     /// use seckey::{ free, SecKey };
