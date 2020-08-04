@@ -1,8 +1,11 @@
-use core::{ fmt, mem };
+use core::fmt;
 use core::ops::{ Deref, DerefMut };
-#[cfg(not(feature = "use_std"))] use memsec::memzero;
-#[cfg(feature = "use_std")] use memsec::{ mlock, munlock };
-use ::ZeroSafe;
+
+#[cfg(not(feature = "ues_os"))]
+use memsec::memzero;
+
+#[cfg(feature = "use_os")]
+use memsec::{ mlock, munlock };
 
 
 /// Temporary Key
@@ -20,56 +23,55 @@ use ::ZeroSafe;
 /// * It will zero the value when `Drop`.
 /// * It will refuse to accept if `T` is reference or pointer, to avoid causing null pointer.
 /// * It is a reference, to avoid it from being affected by stack copy (return value).
-pub struct TempKey<'a, T: ?Sized + 'static>(&'a mut T);
+pub struct TempKey<'a, T: AsMut<[u8]>>(&'a mut T);
 
 
-impl<'a, T: ?Sized> TempKey<'a, T> {
-    pub unsafe fn unsafe_from(t: &'a mut T) -> TempKey<'a, T> {
-        #[cfg(feature = "use_std")]
-        mlock(t as *mut T as *mut u8, mem::size_of_val(t));
+impl<'a, T: AsMut<[u8]>> TempKey<'a, T> {
+    pub fn new(t: &'a mut T) -> TempKey<'a, T> {
+        #[cfg(feature = "use_os")] unsafe {
+            let t = t.as_mut();
+            mlock(t.as_mut_ptr(), t.len());
+        }
 
         TempKey(t)
     }
 }
 
-impl<'a, T: ?Sized + ZeroSafe> From<&'a mut T> for TempKey<'a, T> {
-    fn from(t: &'a mut T) -> TempKey<'a, T> {
-        unsafe { TempKey::unsafe_from(t) }
-    }
-}
-
-impl<'a, T: ?Sized> Deref for TempKey<'a, T> {
+impl<'a, T: AsMut<[u8]>> Deref for TempKey<'a, T> {
     type Target = T;
 
+    #[inline]
     fn deref(&self) -> &T {
         self.0
     }
 }
 
-impl<'a, T: ?Sized> DerefMut for TempKey<'a, T> {
+impl<'a, T: AsMut<[u8]>> DerefMut for TempKey<'a, T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
 }
 
-impl<'a, T: ?Sized> fmt::Debug for TempKey<'a, T> {
+impl<'a, T: AsMut<[u8]>> fmt::Debug for TempKey<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_tuple("TempKey")
-            .field(&format_args!("{:p}", self.0))
+            .field(&format_args!("{:p}", &self.0))
             .finish()
     }
 }
 
-impl<'a, T: ?Sized> Drop for TempKey<'a, T> {
+impl<'a, T: AsMut<[u8]>> Drop for TempKey<'a, T> {
     fn drop(&mut self) {
-        let size = mem::size_of_val(self.0);
-
         unsafe {
-            #[cfg(feature = "use_std")]
-            munlock(self.0 as *mut T as *mut u8, size);
+            let t = self.0.as_mut();
+            let size = t.len();
 
-            #[cfg(not(feature = "use_std"))]
-            memzero(self.0 as *mut T as *mut u8, size);
+            #[cfg(feature = "ues_os")]
+            munlock(t.as_mut_ptr(), size);
+
+            #[cfg(not(feature = "ues_os"))]
+            memzero(t.as_mut_ptr(), size);
         }
     }
 }
