@@ -1,5 +1,3 @@
-extern crate seckey;
-
 use seckey::free;
 
 

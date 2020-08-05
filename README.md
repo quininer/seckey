@@ -10,9 +10,9 @@ Use [memsec](https://github.com/quininer/memsec) protected secret memory.
 ### exmaple
 
 ```rust
-use seckey::SecKey;
+use seckey::SecBytes;
 
-let secpass = SecKey::new([8u8; 8]).unwrap();
+let mut secpass = SecBytes::with(1, |buf| buf.copy_from_slice(&[8; 8][..]));
 
 {
 	assert_eq!([8u8; 8], *secpass.read());

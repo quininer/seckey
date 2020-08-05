@@ -1,83 +1,34 @@
-#![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
 #![cfg(feature = "use_std")]
 
-extern crate seckey;
-
-use seckey::SecKey;
+use seckey::SecBytes;
 
 
 #[test]
 fn seckey_read_then_read() {
-    let secpass = SecKey::new(1).unwrap();
+    let secpass = SecBytes::with(1, |buf| buf[0] = 1);
 
     let rpass1 = secpass.read();
     let rpass2 = secpass.read();
 
-    assert_eq!(1, *rpass1);
-    assert_eq!(1, *rpass2);
+    assert_eq!(1, rpass1[0]);
+    assert_eq!(1, rpass2[0]);
 
     drop(rpass1);
 
-    assert_eq!(1, *rpass2);
+    assert_eq!(1, rpass2[0]);
 }
 
 #[test]
-fn seckey_drop_test() {
-    static mut X: usize = 0;
+fn test_readme() {
+    let mut secpass = SecBytes::with(8, |buf| buf.copy_from_slice(&[8; 8][..]));
 
-    #[derive(Debug)] struct Bar(usize);
-    #[derive(Debug)] struct Baz<T>(T);
-    impl Drop for Bar {
-        fn drop(&mut self) {
-            unsafe {
-                X += 1;
-                assert_eq!(
-                    self.0,
-                    if X == 2 { 3 } else { X }
-                );
-            }
-        }
+    {
+        assert_eq!([8u8; 8], *secpass.read());
     }
 
     {
-        let bar = Bar(1);
-        let bar2 = SecKey::new(bar).unwrap();
-        drop(bar2);
+        let mut wpass = secpass.write();
+        wpass[0] = 0;
+        assert_eq!([0, 8, 8, 8, 8, 8, 8, 8], *wpass);
     }
-    assert_eq!(unsafe { X }, 1);
-
-    {
-        let bar = Bar(3);
-        let bar3 = unsafe { SecKey::from_ptr(&bar).unwrap() };
-        drop(bar);
-        drop(bar3);
-    }
-    assert_eq!(unsafe { X }, 3);
-
-    {
-        let baz = Baz(Bar(4));
-        let baz2 = SecKey::new(baz).unwrap();
-        drop(baz2);
-    }
-    assert_eq!(unsafe { X }, 4);
-}
-
-#[test]
-fn test_seckey_ref() {
-    pub struct Bar(u32);
-
-    impl Drop for Bar {
-        fn drop(&mut self) {
-            assert_eq!(self.0, 0x42);
-            self.0 += 1;
-        }
-    }
-
-    let mut bar = Bar(0x42);
-
-    {
-        let _sk = SecKey::new(&mut bar).ok().unwrap();
-    }
-
-    assert_eq!(bar.0, 0x42);
 }

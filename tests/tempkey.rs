@@ -8,89 +8,63 @@ use seckey::{ TempKey, CmpKey };
 
 #[test]
 fn cmpkey_cmp_test() {
-    assert!(CmpKey(1) > 0);
-    assert!(CmpKey(0) < 1);
-    assert_eq!(CmpKey(0), 0);
-    assert_ne!(CmpKey(1), 0);
+    #[derive(Debug)]
+    struct I32Array([u8; 4]);
 
-    assert!(CmpKey(-1) > 0);
+    impl I32Array {
+        fn new(n: i32) -> I32Array {
+            I32Array(n.to_le_bytes())
+        }
+    }
+
+    impl AsRef<[u8]> for I32Array {
+        fn as_ref(&self) -> &[u8] {
+            &self.0[..]
+        }
+    }
+
+    assert!(CmpKey(I32Array::new(1)) > I32Array::new(0));
+    assert!(CmpKey(I32Array::new(0)) < I32Array::new(1));
+    assert_eq!(CmpKey(I32Array::new(0)), I32Array::new(0));
+    assert_ne!(CmpKey(I32Array::new(1)), I32Array::new(0));
+
+    assert!(CmpKey(I32Array::new(-1)) > I32Array::new(0));
         // ^- NOTE 4294967295 > 0
 
     let a = [2; 3];
     let b = [1; 4];
-    assert_eq!(&a[..] > &b[..], CmpKey::from(&a[..]) > CmpKey::from(&b[..]));
+    assert_eq!(&a[..] > &b[..], CmpKey(&a[..]) > CmpKey(&b[..]));
 }
 
 #[test]
 fn tempkey_slice_test() {
     // fixed size
-    let mut key = [42u32; 8];
+    let mut key = [42u8; 32];
 
     {
-        let mut tempkey = TempKey::from(&mut key);
-        assert_eq!(CmpKey::from(&*tempkey), &[42u32; 8]);
+        let mut tempkey = TempKey::new(&mut key);
+        assert_eq!(CmpKey(&tempkey[..]), &[42u8; 32][..]);
 
         tempkey[1] = 0;
-        assert_eq!(CmpKey::from(&*tempkey), &[42u32, 0, 42, 42, 42, 42, 42, 42]);
+        let mut res = [42u8; 32];
+        res[1] = 0;
+        assert_eq!(CmpKey(&tempkey[..]), &res[..]);
     }
 
-    assert_eq!(key, [0; 8]);
+    assert_eq!(key, [0; 32]);
 
     // dyn size
-    let mut key = [42u32; 8];
+    let mut key = [42u8; 32];
 
     {
-        let mut tempkey = TempKey::from(&mut key[1..7]);
-        assert_eq!(CmpKey::from(&*tempkey), &[42; 6][..]);
+        let mut tempkey = TempKey::new(&mut key[1..7]);
+        assert_eq!(CmpKey(&tempkey[..]), &[42; 6][..]);
 
         tempkey[1] = 0;
-        assert_eq!(CmpKey::from(&*tempkey), &[42, 0, 42, 42, 42, 42][..]);
+        assert_eq!(CmpKey(&tempkey[..]), &[42, 0, 42, 42, 42, 42][..]);
     }
 
     assert_eq!(&key[1..7], [0; 6]);
     assert_eq!(key[0], 42);
     assert_eq!(key[7], 42);
-
-    // dyn size x2
-    let mut key = [[41u32; 3], [42u32; 3], [43u32; 3], [44u32; 3]];
-
-    {
-        let mut tempkey = TempKey::from(&mut key[1..3]);
-        assert_eq!(CmpKey::from(&tempkey[0][..]), &[42u32; 3][..]);
-
-        tempkey[1][1] = 24;
-        assert_eq!(CmpKey::from(&tempkey[1][1]), &24);
-    }
-
-    assert_eq!(key[0], [41; 3]);
-    assert_eq!(key[1], [0; 3]);
-    assert_eq!(key[2], [0; 3]);
-    assert_eq!(key[3], [44; 3]);
-
-    {
-        let tempkey = TempKey::from(&mut key);
-        assert_eq!(CmpKey::from(&tempkey[0][0]), &41);
-    }
-    assert_eq!(key, [[0; 3]; 4]);
-}
-
-#[test]
-fn tempkey_from_str() {
-    let mut bar = String::from("bar");
-    {
-        let bar = TempKey::from(&mut bar as &mut str);
-        assert_eq!(CmpKey::from(&*bar), "bar");
-        assert_ne!(CmpKey::from(&*bar), "rab");
-    }
-    assert_eq!(bar, String::from_utf8(vec![0x00, 0x00, 0x00]).unwrap());
-
-
-    let mut bar2 = String::from("barbarbar");
-    {
-        let bar2 = TempKey::from(&mut bar2[3..][..3]);
-        assert_eq!(CmpKey::from(&*bar2), "bar");
-    }
-    assert!(bar2.starts_with("bar"));
-    assert!(bar2.ends_with("bar"));
-    assert_eq!(&bar2[3..][..3], String::from_utf8(vec![0x00, 0x00, 0x00]).unwrap());
 }

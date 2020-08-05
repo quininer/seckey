@@ -1,8 +1,9 @@
-use core::{ fmt, slice };
-use core::ptr::{ self, NonNull };
+use core::fmt;
+use core::ptr::NonNull;
 use core::ops::{ Deref, DerefMut };
+
+#[cfg(feature = "use_os")]
 use core::cell::Cell;
-use core::borrow::{ Borrow, BorrowMut };
 
 #[cfg(feature = "use_os")]
 use memsec::{ mprotect, Prot };
@@ -25,7 +26,6 @@ mod alloc {
 
 #[cfg(not(feature = "use_os"))]
 mod alloc {
-    use std::slice;
     use std::ptr::NonNull;
     use std::alloc::Layout;
 
@@ -64,7 +64,7 @@ impl SecBytes {
             let memptr = alloc::malloc_sized(len).expect("seckey alloc failed");
 
             {
-                let arr = slice::from_raw_parts_mut(memptr.as_ptr(), len);
+                let arr = std::slice::from_raw_parts_mut(memptr.as_ptr(), len);
                 f(arr);
             }
 
@@ -85,11 +85,12 @@ impl SecBytes {
     /// Borrow Read
     ///
     /// ```
-    /// use seckey::SecKey;
+    /// use seckey::SecBytes;
     ///
-    /// let secpass = SecKey::new([8u8; 8]).unwrap();
+    /// let secpass = SecBytes::with(8, |buf| buf.copy_from_slice(&[8u8; 8][..]));
     /// assert_eq!([8u8; 8], *secpass.read());
     /// ```
+    #[cfg_attr(not(feature = "use_os"), inline)]
     pub fn read(&self) -> SecReadGuard<'_> {
         #[cfg(feature = "use_os")] {
             let count = self.count.get();
@@ -105,13 +106,14 @@ impl SecBytes {
     /// Borrow Write
     ///
     /// ```
-    /// # use seckey::SecKey;
+    /// # use seckey::SecBytes;
     /// #
-    /// # let mut secpass = SecKey::new([8u8; 8]).unwrap();
+    /// # let mut secpass = SecBytes::with(8, |buf| buf.copy_from_slice(&[8u8; 8][..]));
     /// let mut wpass = secpass.write();
     /// wpass[0] = 0;
     /// assert_eq!([0, 8, 8, 8, 8, 8, 8, 8], *wpass);
     /// ```
+    #[cfg_attr(not(feature = "use_os"), inline)]
     pub fn write(&mut self) -> SecWriteGuard<'_> {
         #[cfg(feature = "use_os")]
         unsafe {
@@ -139,6 +141,9 @@ impl fmt::Pointer for SecBytes {
 impl Drop for SecBytes {
     fn drop(&mut self) {
         unsafe {
+            #[cfg(feature = "use_os")]
+            mprotect(self.ptr, Prot::ReadWrite);
+
             alloc::free(self.ptr, self.len);
         }
     }
@@ -154,7 +159,7 @@ impl<'a> Deref for SecReadGuard<'a> {
     #[inline]
     fn deref(&self) -> &[u8] {
         unsafe {
-            slice::from_raw_parts(self.0.ptr.as_ptr(), self.0.len)
+            std::slice::from_raw_parts(self.0.ptr.as_ptr(), self.0.len)
         }
     }
 }
@@ -182,7 +187,7 @@ impl<'a> Deref for SecWriteGuard<'a> {
     #[inline]
     fn deref(&self) -> &[u8] {
         unsafe {
-            slice::from_raw_parts(self.0.ptr.as_ptr(), self.0.len)
+            std::slice::from_raw_parts(self.0.ptr.as_ptr(), self.0.len)
         }
     }
 }
@@ -191,7 +196,7 @@ impl<'a> DerefMut for SecWriteGuard<'a> {
     #[inline]
     fn deref_mut(&mut self) -> &mut [u8] {
         unsafe {
-            slice::from_raw_parts_mut(self.0.ptr.as_ptr(), self.0.len)
+            std::slice::from_raw_parts_mut(self.0.ptr.as_ptr(), self.0.len)
         }
     }
 }

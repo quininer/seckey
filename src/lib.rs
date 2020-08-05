@@ -5,13 +5,18 @@
 #[cfg(feature = "use_std")]
 extern crate std;
 
-pub mod cmpkey;
-pub mod tempkey;
+mod cmpkey;
+mod tempkey;
 
 #[cfg(feature = "use_std")]
-pub mod bytes;
+mod bytes;
 
 use core::{ mem, ptr };
+pub use cmpkey::CmpKey;
+pub use tempkey::TempKey;
+
+#[cfg(feature = "use_std")]
+pub use bytes::SecBytes;
 
 
 /// Free a value
