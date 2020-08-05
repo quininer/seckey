@@ -16,7 +16,7 @@ pub use cmpkey::CmpKey;
 pub use tempkey::TempKey;
 
 #[cfg(feature = "use_std")]
-pub use bytes::SecBytes;
+pub use bytes::{ SecBytes, SecReadGuard, SecWriteGuard };
 
 
 /// Free a value

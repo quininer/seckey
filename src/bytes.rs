@@ -54,7 +54,9 @@ unsafe impl Send for SecBytes {}
 
 impl SecBytes {
     pub fn new(len: usize) -> SecBytes {
-        SecBytes::with(len, |_| ())
+        fn id(_: &mut [u8]) {}
+
+        SecBytes::with(len, id)
     }
 
     pub fn with<F>(len: usize, f: F) -> SecBytes
