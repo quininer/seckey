@@ -7,6 +7,7 @@ extern crate std;
 
 mod cmpkey;
 mod tempkey;
+mod alloc;
 
 #[cfg(feature = "use_std")]
 mod bytes;
@@ -14,6 +15,7 @@ mod bytes;
 use core::{ mem, ptr };
 pub use cmpkey::CmpKey;
 pub use tempkey::TempKey;
+pub use alloc::ZeroAllocator;
 
 #[cfg(feature = "use_std")]
 pub use bytes::{ SecBytes, SecReadGuard, SecWriteGuard };
