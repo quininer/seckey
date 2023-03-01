@@ -30,7 +30,7 @@ unsafe impl<T: GlobalAlloc> GlobalAlloc for ZeroAllocator<T> {
             .unwrap_or_else(ptr::null_mut);
 
         if !new_ptr.is_null() {
-            ptr::copy_nonoverlapping(new_ptr, ptr, layout.size());
+            ptr::copy_nonoverlapping(ptr, new_ptr, layout.size());
             self.dealloc(ptr, layout);
         }
 
