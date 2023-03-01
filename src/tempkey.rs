@@ -1,12 +1,6 @@
 use core::fmt;
 use core::ops::{ Deref, DerefMut };
 
-#[cfg(not(feature = "use_os"))]
-use memsec::memzero;
-
-#[cfg(feature = "use_os")]
-use memsec::{ mlock, munlock };
-
 
 /// Temporary Key
 ///
@@ -28,14 +22,7 @@ pub struct TempKey<T: AsMut<[u8]>>(T);
 
 
 impl<T: AsMut<[u8]>> TempKey<T> {
-    #[allow(unused_mut)]
-    pub fn new(mut t: T) -> TempKey<T> {
-        #[cfg(feature = "use_os")]
-        unsafe {
-            let t = t.as_mut();
-            mlock(t.as_mut_ptr(), t.len());
-        }
-
+    pub fn new(t: T) -> TempKey<T> {
         TempKey(t)
     }
 }
@@ -66,15 +53,6 @@ impl<T: AsMut<[u8]>> fmt::Debug for TempKey<T> {
 
 impl<T: AsMut<[u8]>> Drop for TempKey<T> {
     fn drop(&mut self) {
-        unsafe {
-            let t = self.0.as_mut();
-            let size = t.len();
-
-            #[cfg(feature = "use_os")]
-            munlock(t.as_mut_ptr(), size);
-
-            #[cfg(not(feature = "use_os"))]
-            memzero(t.as_mut_ptr(), size);
-        }
+        crate::zero(self.0.as_mut());
     }
 }
